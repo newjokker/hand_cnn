@@ -9,11 +9,13 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 
 
+# 自定义分类网络
+# 手写数字分类网络
+
 # --------------------------------------------------
 # todo 如何缩小模型，裁剪模型
 # todo 学习率的更新
 # --------------------------------------------------
-
 
 # Training settings
 batch_size = 64
@@ -30,6 +32,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch
 
 
 class Net(nn.Module):
+
     def __init__(self):
         super(Net, self).__init__()
         # 输入1通道，输出10通道，kernel 5*5
@@ -59,17 +62,20 @@ class Net(nn.Module):
         return F.log_softmax(x)
 
 
-
 def train(epoch):
+    #
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = Variable(data), Variable(target)
+        # 使用当前命名空间中的 grad，所以需要 optimizer 每次清空
         optimizer.zero_grad()
         output = model(data)
+        # 计算 loss
         loss = F.nll_loss(output, target)
         # 计算反向梯度
         loss.backward()
-        # 使用当前命名空间中的 grad，所以需要 optimizer 每次清空
+        # 更新模型参数
         optimizer.step()
+        # 日志
         if batch_idx % 200 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.data.item()))
 
