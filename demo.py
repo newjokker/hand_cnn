@@ -11,6 +11,7 @@ from torch.autograd import Variable
 
 # --------------------------------------------------
 # todo 如何缩小模型，裁剪模型
+# todo 学习率的更新
 # --------------------------------------------------
 
 
@@ -37,7 +38,6 @@ class Net(nn.Module):
         #
         self.BN_20 = nn.BatchNorm2d(20)                     # BatchNorm2d 显著增加了模型的性能
         self.BN_40 = nn.BatchNorm2d(40)
-        # self.GN = nn.GroupNorm()
         #
         self.mp = nn.MaxPool2d(2)
         # fully connect
@@ -66,7 +66,9 @@ def train(epoch):
         optimizer.zero_grad()
         output = model(data)
         loss = F.nll_loss(output, target)
+        # 计算反向梯度
         loss.backward()
+        # 使用当前命名空间中的 grad，所以需要 optimizer 每次清空
         optimizer.step()
         if batch_idx % 200 == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.data.item()))
