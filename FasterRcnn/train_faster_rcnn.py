@@ -122,9 +122,7 @@ def main():
     # Model creating
     print("Creating model")
     # model = models.__dict__[args.model](num_classes=num_classes, pretrained=args.pretrained)
-    model = torchvision.models.detection.__dict__[args.model](num_classes=num_classes,
-                                                              pretrained=args.pretrained)
-
+    model = torchvision.models.detection.__dict__[args.model](num_classes=num_classes, pretrained=args.pretrained)
     device = torch.device(args.device)
     model.to(device)
 
@@ -143,8 +141,7 @@ def main():
     # Optimizer
     params = [p for p in model.parameters() if p.requires_grad]
 
-    optimizer = torch.optim.SGD(
-        params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    optimizer = torch.optim.SGD(params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
 
