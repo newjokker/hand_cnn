@@ -38,8 +38,8 @@ if __name__ == "__main__":
     data_path = r"/home/ldq/Yet-Another-EfficientDet-Pytorch/datasets"
     project_name = r"fzc_broken_class"
     yaml_path = r"/home/ldq/Yet-Another-EfficientDet-Pytorch/projects/fzc_broken_class.yml"
-    batch_size = 1
-    num_workers = 12  # 并行的个数
+    batch_size = 10
+    num_workers = 0  # 并行的个数
     compound_coef = 7
     # ----------------------------------------------------------------------------------------------------------------------
 
