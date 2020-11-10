@@ -36,6 +36,15 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         # 与分类不同，这边的 target 除了有 tag ，还应该有位置，有分类损失 + 回归损失
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         # fixme 得到损失值，这边的 target 的结构是什么 ？？？
+        # fixme 这边的 model(images, targets) 执行的是 model forward 函数里面的内容，因为这当中写法会执行 __call__ 里面的内容， 复函数 __call__ 里面指定执行  forward 函数
+
+
+        # --------------
+        #  targets (list[Dict[Tensor]]): ground-truth boxes present in the image (optional)
+        # --------------
+
+
+
         loss_dict = model(images, targets)
         # 直接将损失值进行相加，应该有分类损失和回归损失两种，这边直接进行了相加，对于 kkx_step_2 这边应该设置的是 分类损失的权重占比比较小，回归损失的占比比较大
         losses = sum(loss for loss in loss_dict.values())
@@ -99,7 +108,6 @@ def evaluate(model, data_loader, device):
     for image, targets in metric_logger.log_every(data_loader, 100, header):
         image = list(img.to(device) for img in image)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
 
         torch.cuda.synchronize()
         model_time = time.time()

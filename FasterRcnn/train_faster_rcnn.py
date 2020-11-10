@@ -121,8 +121,8 @@ def main():
 
     # Model creating
     print("Creating model")
-    # model = models.__dict__[args.model](num_classes=num_classes, pretrained=args.pretrained)
-    model = torchvision.models.detection.__dict__[args.model](num_classes=num_classes, pretrained=args.pretrained)
+    # model = torchvision.models.detection.__dict__[args.model](num_classes=num_classes, pretrained=args.pretrained)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(num_classes=num_classes, pretrained=args.pretrained)
     device = torch.device(args.device)
     model.to(device)
 
@@ -181,4 +181,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
 
