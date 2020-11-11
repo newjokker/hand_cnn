@@ -2,10 +2,8 @@ from collections import defaultdict, deque
 import datetime
 import pickle
 import time
-
 import torch
 import torch.distributed as dist
-
 import errno
 import os
 

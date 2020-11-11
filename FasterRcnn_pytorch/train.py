@@ -18,6 +18,7 @@ from PIL import Image
 from xml.dom.minidom import parse
 from JoTools.txkj.parseXml import ParseXml, parse_xml
 
+
 # fixme cpu 训练成功使用的环境是 torch 1.5.0, torchvision 0.6.0
 # fixme 如果不是 gpu 版本的 torch 强行使用 gpu 进行训练就可能报错，关于 memory 的
 # ----------------------------------------------------------------------------------------------------------------------
@@ -29,6 +30,8 @@ num_classes = 18
 device = torch.device('cpu')
 batch_size = 5
 model_path = r"./diy_fas.pth"
+# let's train it for   epochs
+num_epochs = 31
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -108,7 +111,6 @@ dataset = MarkDataset(root, get_transform(train=True))
 dataset_test = MarkDataset(root, get_transform(train=False))
 
 
-# fixme 这边要进行修改
 # fixme 将数据集分为 训练集和验证集
 indices = torch.randperm(len(dataset)).tolist()
 dataset = torch.utils.data.Subset(dataset, indices[:100])
@@ -128,29 +130,54 @@ model.to(device)
 
 # construct an optimizer
 params = [p for p in model.parameters() if p.requires_grad]
-
-# SGD
 optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
 
-# and a learning rate scheduler
-# cos学习率
+# 学习率管理器
 lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
 
-# let's train it for   epochs
-num_epochs = 31
-
+# training
 for epoch in range(num_epochs):
-    # train for one epoch, printing every 10 iterations
-    # engine.py的train_one_epoch函数将images和targets都.to(device)了
+    # train for one epoch
     train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=50)
-
     # update the learning rate
     lr_scheduler.step()
-
     # evaluate on the test dataset
     evaluate(model, data_loader_test, device=device)
-
+    # save model
     torch.save(model, model_path)
 
 print("That's it!")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
