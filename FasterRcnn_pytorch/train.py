@@ -1,46 +1,45 @@
 # -*- coding: utf-8  -*-
 # -*- author: jokker -*-
 
-
-from engine import train_one_epoch, evaluate
 import utils
 import transforms as T
 from engine import train_one_epoch, evaluate
-import torch
 import torchvision
+import numpy as np
 import torch
 import os
-import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
 from PIL import Image
-from xml.dom.minidom import parse
-from JoTools.txkj.parseXml import ParseXml, parse_xml
+from JoTools.txkj.parseXml import parse_xml
 
+"""
+# 运行的 torch 环境
+    * torch-1.5.0+cu101-cp36-cp36m-linux_x86_64.whl
+    * torchvision-0.6.0+cu101-cp36-cp36m-linux_x86_64.whl
+# 
+"""
 
-# fixme cpu 训练成功使用的环境是 torch 1.5.0, torchvision 0.6.0
-# fixme 如果不是 gpu 版本的 torch 强行使用 gpu 进行训练就可能报错，关于 memory 的
 # ----------------------------------------------------------------------------------------------------------------------
 root = r'/home/ldq/FasterRcnn/kkx_train_data_2020_10_29'
 # 3 classes, mark_type_1，mark_type_2，background
 num_classes = 18
 # train on the GPU or on the CPU, if a GPU is not available
 # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-device = torch.device('cpu')
+device = torch.device('cuda')
 batch_size = 5
-model_path = r"./diy_fas.pth"
 # let's train it for   epochs
-num_epochs = 31
+num_epochs = 300
+# 指定使用 GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 def get_transform(train):
     transforms = [T.ToTensor()]
-    # converts the image, a PIL image, into a PyTorch Tensor
 
-    """
-    
+    """    # converts the image, a PIL image, into a PyTorch Tensor
     if train:
         # during training, randomly flip the training images
         # and ground-truth for data augmentation
@@ -52,14 +51,15 @@ def get_transform(train):
 
 
 class MarkDataset(torch.utils.data.Dataset):
+    """解析数据，得到符合规范的 dataset"""
 
     def __init__(self, root, transforms=None):
         self.root = root
         self.transforms = transforms
         # fixme 如果两个文件夹中的文件不一样多就会出现问题了，所以这个逻辑是不是需要改一下
         # load all image files, sorting them to ensure that they are aligned
-        self.imgs = list(sorted(os.listdir(os.path.join(root, "JPEGImages"))))[:120]
-        self.xmls = list(sorted(os.listdir(os.path.join(root, "Annotations"))))[:120]
+        self.imgs = list(sorted(os.listdir(os.path.join(root, "JPEGImages"))))
+        self.xmls = list(sorted(os.listdir(os.path.join(root, "Annotations"))))
 
     def __getitem__(self, idx):
         # load images and bbox
@@ -113,16 +113,14 @@ dataset_test = MarkDataset(root, get_transform(train=False))
 
 # fixme 将数据集分为 训练集和验证集
 indices = torch.randperm(len(dataset)).tolist()
-dataset = torch.utils.data.Subset(dataset, indices[:100])
-dataset_test = torch.utils.data.Subset(dataset_test, indices[100:])
+dataset = torch.utils.data.Subset(dataset, indices[:-100])
+dataset_test = torch.utils.data.Subset(dataset_test, indices[-100:])
 
 # define training and validation data loaders
-# 在jupyter notebook里训练模型时num_workers参数只能为0，不然会报错，这里就把它注释掉了
-data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,  num_workers=4, collate_fn=utils.collate_fn)
+data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=utils.collate_fn)
 data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, shuffle=False,  num_workers=4, collate_fn=utils.collate_fn)
 
-# get the model using our helper function
-# 或get_object_detection_model(num_classes)
+# get the model using our helper function get_object_detection_model(num_classes)
 model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
 
 # move model to the right device
@@ -138,13 +136,15 @@ lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T
 # training
 for epoch in range(num_epochs):
     # train for one epoch
-    train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=50)
+    train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
     # update the learning rate
     lr_scheduler.step()
     # evaluate on the test dataset
     evaluate(model, data_loader_test, device=device)
     # save model
-    torch.save(model, model_path)
+    if epoch % 10:
+        model_path = r"./diy_fas_{0}.pth".format(epoch)
+        torch.save(model, model_path)
 
 print("That's it!")
 
