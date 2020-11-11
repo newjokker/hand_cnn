@@ -18,14 +18,24 @@ from PIL import Image
 from xml.dom.minidom import parse
 from JoTools.txkj.parseXml import ParseXml, parse_xml
 
+# fixme cpu 训练成功使用的环境是 torch 1.5.0, torchvision 0.6.0
+# fixme 如果不是 gpu 版本的 torch 强行使用 gpu 进行训练就可能报错，关于 memory 的
+# ----------------------------------------------------------------------------------------------------------------------
 root = r'/home/ldq/FasterRcnn/kkx_train_data_2020_10_29'
+# 3 classes, mark_type_1，mark_type_2，background
+num_classes = 18
+# train on the GPU or on the CPU, if a GPU is not available
+# device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cpu')
+batch_size = 5
+model_path = r"./diy_fas.pth"
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 def get_transform(train):
-    transforms = []
+    transforms = [T.ToTensor()]
     # converts the image, a PIL image, into a PyTorch Tensor
-    transforms.append(T.ToTensor())
-    
+
     """
     
     if train:
@@ -45,8 +55,8 @@ class MarkDataset(torch.utils.data.Dataset):
         self.transforms = transforms
         # fixme 如果两个文件夹中的文件不一样多就会出现问题了，所以这个逻辑是不是需要改一下
         # load all image files, sorting them to ensure that they are aligned
-        self.imgs = list(sorted(os.listdir(os.path.join(root, "JPEGImages"))))
-        self.xmls = list(sorted(os.listdir(os.path.join(root, "Annotations"))))
+        self.imgs = list(sorted(os.listdir(os.path.join(root, "JPEGImages"))))[:120]
+        self.xmls = list(sorted(os.listdir(os.path.join(root, "Annotations"))))[:120]
 
     def __getitem__(self, idx):
         # load images and bbox
@@ -93,34 +103,25 @@ class MarkDataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 
-# train on the GPU or on the CPU, if a GPU is not available
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
-# 3 classes, mark_type_1，mark_type_2，background
-num_classes = 3
 # use our dataset and defined transformations
 dataset = MarkDataset(root, get_transform(train=True))
 dataset_test = MarkDataset(root, get_transform(train=False))
 
-# split the dataset in train and test set
-# 我的数据集一共有492张图，差不多训练验证4:1
+
+# fixme 这边要进行修改
+# fixme 将数据集分为 训练集和验证集
 indices = torch.randperm(len(dataset)).tolist()
-dataset = torch.utils.data.Subset(dataset, indices[:-100])
-dataset_test = torch.utils.data.Subset(dataset_test, indices[-100:])
+dataset = torch.utils.data.Subset(dataset, indices[:100])
+dataset_test = torch.utils.data.Subset(dataset_test, indices[100:])
 
 # define training and validation data loaders
 # 在jupyter notebook里训练模型时num_workers参数只能为0，不然会报错，这里就把它注释掉了
-data_loader = torch.utils.data.DataLoader(
-    dataset, batch_size=2, shuffle=True,  # num_workers=4,
-    collate_fn=utils.collate_fn)
-
-data_loader_test = torch.utils.data.DataLoader(
-    dataset_test, batch_size=2, shuffle=False,  # num_workers=4,
-    collate_fn=utils.collate_fn)
+data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,  num_workers=4, collate_fn=utils.collate_fn)
+data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, shuffle=False,  num_workers=4, collate_fn=utils.collate_fn)
 
 # get the model using our helper function
-model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes,
-                                                             pretrained_backbone=True)  # 或get_object_detection_model(num_classes)
+# 或get_object_detection_model(num_classes)
+model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
 
 # move model to the right device
 model.to(device)
@@ -129,8 +130,7 @@ model.to(device)
 params = [p for p in model.parameters() if p.requires_grad]
 
 # SGD
-optimizer = torch.optim.SGD(params, lr=0.0003,
-                            momentum=0.9, weight_decay=0.0005)
+optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
 
 # and a learning rate scheduler
 # cos学习率
@@ -150,8 +150,7 @@ for epoch in range(num_epochs):
     # evaluate on the test dataset
     evaluate(model, data_loader_test, device=device)
 
-    print('')
-    print('==================================================')
-    print('')
+    torch.save(model, model_path)
 
 print("That's it!")
+

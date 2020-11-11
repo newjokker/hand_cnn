@@ -1,13 +1,14 @@
+# -*- coding: utf-8  -*-
+# -*- author: jokker -*-
+
 import math
 import sys
 import time
 import torch
-
+import utils
 import torchvision.models.detection.mask_rcnn
-
 from coco_utils import get_coco_api_from_dataset
 from coco_eval import CocoEvaluator
-import utils
 
 """
 
@@ -42,6 +43,10 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
 
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
+    print('-'*50)
+    print(len(data_loader))
+    print('-'*50)
+
     for images, targets in metric_logger.log_every(data_loader, print_freq, header):
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
@@ -52,10 +57,6 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         # print('loss_dict', loss_dict)
         print("loss : ", losses)
         # print('target \n', targets)
-
-        # for each in targets:
-        #     print(each)
-        #     print('-'*50)
 
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
