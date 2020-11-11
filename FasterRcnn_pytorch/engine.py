@@ -9,6 +9,25 @@ from coco_utils import get_coco_api_from_dataset
 from coco_eval import CocoEvaluator
 import utils
 
+"""
+
+target 是一个 list 其中的每一个元素是字典，具体 type 如下:
+
+{'boxes': tensor([[586.9481, 259.2025, 866.3922, 319.0185],
+        [163.7322, 384.6138, 181.3783, 408.0201],
+        [236.9199, 416.9780, 264.4015, 438.3615],
+        [159.9716, 446.7415, 178.1962, 466.6802],
+        [474.9970, 336.3565, 498.7179, 360.6296],
+        [223.0345, 369.2986, 247.9126, 387.7924],
+        [288.7010, 375.9449, 315.8932, 403.3966],
+        [365.6493, 358.3179, 390.8166, 386.6366],
+        [108.4798, 444.7188, 127.5723, 462.9236],
+        [150.1361, 421.0236, 169.2285, 434.3160],
+        [203.9421, 366.1200, 222.7452, 377.9676]], device='cuda:0'), 'labels': tensor([13, 17, 17, 17, 12, 16, 16, 16, 16, 16, 16], device='cuda:0'), 'image_id': tensor([1544], device='cuda:0'), 'area': tensor([199962.,   4941.,   7030.,   4347.,   6888.,   5504.,   8930.,   8526.,
+          4158.,   3036.,   2665.], device='cuda:0'), 'iscrowd': tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], device='cuda:0')}
+"""
+
+
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     model.train()
@@ -28,8 +47,15 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         loss_dict = model(images, targets)
-
         losses = sum(loss for loss in loss_dict.values())
+
+        # print('loss_dict', loss_dict)
+        print("loss : ", losses)
+        # print('target \n', targets)
+
+        # for each in targets:
+        #     print(each)
+        #     print('-'*50)
 
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)

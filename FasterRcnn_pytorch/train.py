@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
 from PIL import Image
 from xml.dom.minidom import parse
+from JoTools.txkj.parseXml import ParseXml, parse_xml
 
 root = r'/home/ldq/FasterRcnn/kkx_train_data_2020_10_29'
 
@@ -24,70 +25,62 @@ def get_transform(train):
     transforms = []
     # converts the image, a PIL image, into a PyTorch Tensor
     transforms.append(T.ToTensor())
+    
+    """
+    
     if train:
         # during training, randomly flip the training images
         # and ground-truth for data augmentation
         # 50%的概率水平翻转
         transforms.append(T.RandomHorizontalFlip(0.5))
+    """
 
     return T.Compose(transforms)
 
 
 class MarkDataset(torch.utils.data.Dataset):
+
     def __init__(self, root, transforms=None):
         self.root = root
         self.transforms = transforms
+        # fixme 如果两个文件夹中的文件不一样多就会出现问题了，所以这个逻辑是不是需要改一下
         # load all image files, sorting them to ensure that they are aligned
         self.imgs = list(sorted(os.listdir(os.path.join(root, "JPEGImages"))))
-        self.bbox_xml = list(sorted(os.listdir(os.path.join(root, "Annotations"))))
+        self.xmls = list(sorted(os.listdir(os.path.join(root, "Annotations"))))
 
     def __getitem__(self, idx):
         # load images and bbox
-        img_path = os.path.join(self.root, "JPEGImages", self.imgs[idx])
-        bbox_xml_path = os.path.join(self.root, "Annotations", self.bbox_xml[idx])
+        img_path = os.path.join(root, "JPEGImages", self.imgs[idx])
+        xml_path = os.path.join(root, "Annotations", self.xmls[idx])
+        #
         img = Image.open(img_path).convert("RGB")
+        # 读取 xml 信息
+        xml_info = parse_xml(xml_path)
 
-        # 读取文件，VOC格式的数据集的标注是xml格式的文件
-        dom = parse(bbox_xml_path)
-        # 获取文档元素对象
-        data = dom.documentElement
-        # 获取 objects
-        objects = data.getElementsByTagName('object')
-        # get bounding box coordinates
-        boxes = []
-        labels = []
-        for object_ in objects:
-            # 获取标签中内容
-            name = object_.getElementsByTagName('name')[0].childNodes[0].nodeValue  # 就是label，mark_type_1或mark_type_2
-            
-            print(name)
+        label_dict = {"dense2": 1, "other_L4kkx": 2, 'other_fist': 3, 
+                        "K_no_lw": 4, "other2": 5, "other_fzc": 6, "other7": 7, "other8": 8,
+                        "other9": 9, "other1": 10, "other6": 11, "K": 12, "dense1": 13,
+                        "dense3": 14, "other3": 15, "Lm": 16, "KG": 17,
+                        }
+        
 
-            # fixme 这边使用我自己的函数进行解析吧，他这边的解析函数功能不是很全
-            labels.append(np.int(name[-1]))  # 背景的label是0，mark_type_1和mark_type_2的label分别是1和2
-
-            bndbox = object_.getElementsByTagName('bndbox')[0]
-            xmin = np.float(bndbox.getElementsByTagName('xmin')[0].childNodes[0].nodeValue)
-            ymin = np.float(bndbox.getElementsByTagName('ymin')[0].childNodes[0].nodeValue)
-            xmax = np.float(bndbox.getElementsByTagName('xmax')[0].childNodes[0].nodeValue)
-            ymax = np.float(bndbox.getElementsByTagName('ymax')[0].childNodes[0].nodeValue)
+        boxes, labels = [], []
+        for each_object in xml_info['object']:
+            name = each_object['name']
+            labels.append(np.int(label_dict[name]))
+            bndbox = each_object['bndbox']
+            xmin, ymin, xmax, ymax = float(bndbox['xmin']), float(bndbox['ymin']), float(bndbox['xmax']), float(
+                bndbox['ymax'])
             boxes.append([xmin, ymin, xmax, ymax])
 
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        # there is only one class
         labels = torch.as_tensor(labels, dtype=torch.int64)
-
         image_id = torch.tensor([idx])
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         # suppose all instances are not crowd
-        iscrowd = torch.zeros((len(objects),), dtype=torch.int64)
-
-        target = {}
-        target["boxes"] = boxes
-        target["labels"] = labels
-        # 由于训练的是目标检测网络，因此没有教程中的target["masks"] = masks
-        target["image_id"] = image_id
-        target["area"] = area
-        target["iscrowd"] = iscrowd
+        iscrowd = torch.zeros((len(xml_info['object']),), dtype=torch.int64)
+        #
+        target = {"boxes": boxes, "labels": labels, "image_id": image_id, "area": area, "iscrowd": iscrowd}
 
         if self.transforms is not None:
             # 注意这里target(包括bbox)也转换\增强了，和from torchvision import的transforms的不同

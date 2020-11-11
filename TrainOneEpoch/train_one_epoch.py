@@ -24,19 +24,26 @@ device = "cpu"
 
 model.train()
 
+print("-"*50)
+
 for images, targets in data_loader:
 
     # fixme 这边是 image object 需要进行转换，转为 tensor
 
-    images = list(image.to(device) for image in images)
-    # targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-    print(11)
-    loss_dict = model(images, targets)
-    print("12")
-    losses = sum(loss for loss in loss_dict.values())
+    print(type(images))
 
-    optimizer.zero_grad()
-    losses.backward()
-    optimizer.step()
+    # images, targets = model.transform(images, targets)
+    #
+    # # images = list(image.to(device) for image in images)
+    # # targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+    #
+    # print(11)
+    # loss_dict = model(images, targets)
+    # print("12")
+    # losses = sum(loss for loss in loss_dict.values())
+    #
+    # optimizer.zero_grad()
+    # losses.backward()
+    # optimizer.step()
 
     print("ok")
