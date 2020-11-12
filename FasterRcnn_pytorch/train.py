@@ -112,9 +112,10 @@ dataset_test = MarkDataset(root, get_transform(train=False))
 
 
 # fixme 将数据集分为 训练集和验证集
+# fixme 验证部分的代码是 cpu 跑的所以特别慢
 indices = torch.randperm(len(dataset)).tolist()
-dataset = torch.utils.data.Subset(dataset, indices[:-100])
-dataset_test = torch.utils.data.Subset(dataset_test, indices[-100:])
+dataset = torch.utils.data.Subset(dataset, indices[:-10])
+dataset_test = torch.utils.data.Subset(dataset_test, indices[-10:])
 
 # define training and validation data loaders
 data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=utils.collate_fn)
@@ -136,15 +137,17 @@ lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T
 # training
 for epoch in range(num_epochs):
     # train for one epoch
+    # fixme 这边其实返回了一个类似于日志的东西，看一下其中的内容，并保存为日志文件
+    # print_freq = 50, 每 50 次进行一次打印
     train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
     # update the learning rate
     lr_scheduler.step()
     # evaluate on the test dataset
-    evaluate(model, data_loader_test, device=device)
+    # evaluate(model, data_loader_test, device=device)
     # save model
-    if epoch % 10:
-        model_path = r"./diy_fas_{0}.pth".format(epoch)
-        torch.save(model, model_path)
+    # if epoch % 10:
+    model_path = r"./diy_fas_{0}.pth".format(epoch)
+    torch.save(model, model_path)
 
 print("That's it!")
 

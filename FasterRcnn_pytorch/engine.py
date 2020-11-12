@@ -11,7 +11,6 @@ from coco_utils import get_coco_api_from_dataset
 from coco_eval import CocoEvaluator
 
 """
-
 target 是一个 list 其中的每一个元素是字典，具体 type 如下:
 
 {'boxes': tensor([[586.9481, 259.2025, 866.3922, 319.0185],
@@ -29,8 +28,8 @@ target 是一个 list 其中的每一个元素是字典，具体 type 如下:
 """
 
 
-
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
+    """训练一个 epoch，返回训练信息"""
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -40,12 +39,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     if epoch == 0:
         warmup_factor = 1. / 1000
         warmup_iters = min(1000, len(data_loader) - 1)
-
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
-
-    print('-'*20 + str(len(data_loader)) +'-'*20)
-    # print(len(data_loader))
-    # print('-'*50)
 
     for images, targets in metric_logger.log_every(data_loader, print_freq, header):
         images = list(image.to(device) for image in images)
@@ -54,14 +48,12 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         loss_dict = model(images, targets)
         losses = sum(loss for loss in loss_dict.values())
 
-        # print('loss_dict', loss_dict)
+        # fixme 打印 loss
         print("loss : ", losses)
-        # print('target \n', targets)
 
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-
         loss_value = losses_reduced.item()
 
         if not math.isfinite(loss_value):
@@ -110,6 +102,8 @@ def evaluate(model, data_loader, device):
 
     for images, targets in metric_logger.log_every(data_loader, 100, header):
         images = list(img.to(device) for img in images)
+
+        print('* evaluate one img')
 
         torch.cuda.synchronize()
         model_time = time.time()
