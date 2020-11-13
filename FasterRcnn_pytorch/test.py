@@ -41,6 +41,8 @@ def dete_one_img(assign_img_path, assign_save_folder):
             conf, tag_index = float(scores[index]), str(labels[index].item())
             res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_dict[int(tag_index)])
 
+    # nms
+    res.do_nms(0.1)
     # 保存画图和 xml
     img_name = os.path.split(assign_img_path)[1]
     save_img_path = os.path.join(assign_save_folder, img_name)
@@ -68,8 +70,11 @@ if __name__ == "__main__":
     model.eval()
 
     if os.path.isdir(img_folder):
-        for each_img in FileOperationUtil.re_all_file(img_folder, lambda x:str(x).endswith(('.jpg', '.JPG', '.png'))):
-            print(each_img)
+        img_path_list = FileOperationUtil.re_all_file(img_folder, lambda x:str(x).endswith(('.jpg', '.JPG', '.png')))
+        img_count = len(img_path_list)
+        for img_index, each_img in enumerate(img_path_list):
+            print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
+            print(print_str)
             dete_one_img(each_img, save_folder)
     else:
         if os.path.isdir(img_path):

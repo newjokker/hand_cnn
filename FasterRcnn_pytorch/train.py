@@ -18,44 +18,48 @@ from JoTools.txkj.parseXml import parse_xml
 # 运行的 torch 环境
     * torch-1.5.0+cu101-cp36-cp36m-linux_x86_64.whl
     * torchvision-0.6.0+cu101-cp36-cp36m-linux_x86_64.whl
-# 
+# 当前代码验证部分是 cpu 跑的，所以会特别慢
+# 参考：
 """
 
+# fixme 参数设置为传参模式
+# todo 除了 test 和 train 将其他 py 放到辅助文件夹中去
+# fixme 更改为断点继续训练
+# fixme 只保存效果最好的模型
+
 # ----------------------------------------------------------------------------------------------------------------------
-root = r'/home/ldq/FasterRcnn/kkx_train_data_2020_10_29'
+root_dir = r'/home/ldq/000_train_data/wtx_fas_train_data'
 # 3 classes, mark_type_1，mark_type_2，background
-num_classes = 18
+num_classes = 5
 # train on the GPU or on the CPU, if a GPU is not available
 # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 device = torch.device('cuda')
-batch_size = 5
+batch_size = 10
 # let's train it for   epochs
 num_epochs = 300
 # 指定使用 GPU
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+#
+label_dict = {"jyzm": 1, "jyzt": 2, 'wtx': 3, "other9": 4}
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 def get_transform(train):
-    transforms = [T.ToTensor()]
+    # converts the image, a PIL image, into a PyTorch Tensor
+    assign_transforms = [T.ToTensor()]
 
-    """    # converts the image, a PIL image, into a PyTorch Tensor
     if train:
         # during training, randomly flip the training images
-        # and ground-truth for data augmentation
-        # 50%的概率水平翻转
-        transforms.append(T.RandomHorizontalFlip(0.5))
-    """
-
-    return T.Compose(transforms)
+        assign_transforms.append(T.RandomHorizontalFlip(0.5))
+    return T.Compose(assign_transforms)
 
 
 class MarkDataset(torch.utils.data.Dataset):
     """解析数据，得到符合规范的 dataset"""
 
-    def __init__(self, root, transforms=None):
+    def __init__(self, root, assign_transforms=None):
         self.root = root
-        self.transforms = transforms
+        self.transforms = assign_transforms
         # fixme 如果两个文件夹中的文件不一样多就会出现问题了，所以这个逻辑是不是需要改一下
         # load all image files, sorting them to ensure that they are aligned
         self.imgs = list(sorted(os.listdir(os.path.join(root, "JPEGImages"))))
@@ -63,19 +67,12 @@ class MarkDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         # load images and bbox
-        img_path = os.path.join(root, "JPEGImages", self.imgs[idx])
-        xml_path = os.path.join(root, "Annotations", self.xmls[idx])
+        img_path = os.path.join(root_dir, "JPEGImages", self.imgs[idx])
+        xml_path = os.path.join(root_dir, "Annotations", self.xmls[idx])
         #
         img = Image.open(img_path).convert("RGB")
         # 读取 xml 信息
         xml_info = parse_xml(xml_path)
-
-        label_dict = {"dense2": 1, "other_L4kkx": 2, 'other_fist': 3, 
-                        "K_no_lw": 4, "other2": 5, "other_fzc": 6, "other7": 7, "other8": 8,
-                        "other9": 9, "other1": 10, "other6": 11, "K": 12, "dense1": 13,
-                        "dense3": 14, "other3": 15, "Lm": 16, "KG": 17,
-                        }
-        
 
         boxes, labels = [], []
         for each_object in xml_info['object']:
@@ -107,12 +104,11 @@ class MarkDataset(torch.utils.data.Dataset):
 
 
 # use our dataset and defined transformations
-dataset = MarkDataset(root, get_transform(train=True))
-dataset_test = MarkDataset(root, get_transform(train=False))
+dataset = MarkDataset(root_dir, get_transform(train=True))
+dataset_test = MarkDataset(root_dir, get_transform(train=False))
 
 
 # fixme 将数据集分为 训练集和验证集
-# fixme 验证部分的代码是 cpu 跑的所以特别慢
 indices = torch.randperm(len(dataset)).tolist()
 dataset = torch.utils.data.Subset(dataset, indices[:-10])
 dataset_test = torch.utils.data.Subset(dataset_test, indices[-10:])
@@ -145,9 +141,9 @@ for epoch in range(num_epochs):
     # evaluate on the test dataset
     # evaluate(model, data_loader_test, device=device)
     # save model
-    # if epoch % 10:
-    model_path = r"./diy_fas_{0}.pth".format(epoch)
-    torch.save(model, model_path)
+    if epoch % 5 == 0:
+        model_path = r"./models/diy_fas_{0}.pth".format(epoch)
+        torch.save(model, model_path)
 
 print("That's it!")
 
