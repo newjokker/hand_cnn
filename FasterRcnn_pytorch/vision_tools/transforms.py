@@ -82,25 +82,6 @@ class RandomChangeImgLight(object):
         return image, target
 
 
-class AddGasussNoise(object):
-    """增加高斯噪声"""
-
-    def __init__(self, prob, mean=0, var=0.04):
-        self.prob = prob
-        self.mean = mean
-        self.var = var
-
-    def __call__(self, image, target):
-        if random.random() < self.prob:
-            # 设置增强系数为 0.5 - 1.5
-            image = image/255.0
-            noise = np.random.normal(self.mean, self.var ** 0.5, image.shape)
-            image = image + noise
-            image = np.clip(image, 0, 1.0)
-            image = np.uint8(image * 255)
-        return image, target
-
-
 class RandomChangechannelOrder(object):
     """改变图像通道的顺序"""
 
@@ -115,6 +96,26 @@ class RandomChangechannelOrder(object):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+
+class AddGasussNoise(object):
+    """增加高斯噪声"""
+
+    def __init__(self, prob, mean=0, var=0.04):
+        self.prob = prob
+        self.mean = mean
+        self.var = var
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            # 设置增强系数为 0.5 - 1.5
+            image = image/255.0
+            noise = np.random.normal(self.mean, self.var ** 0.5, image.shape)
+            # fixme 下面的几个操作会破坏 tensor 数据结构
+            image = image + noise
+            image = np.clip(image, 0, 1.0)
+            image = np.uint8(image * 255)
+        return image, target
+
 
 class RandomVerticalFlip(object):
     """竖直方向旋转扩增"""
