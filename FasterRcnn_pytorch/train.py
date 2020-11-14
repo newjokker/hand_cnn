@@ -1,18 +1,22 @@
 # -*- coding: utf-8  -*-
 # -*- author: jokker -*-
 
-import utils
-import transforms as T
-from engine import train_one_epoch, evaluate
-import torchvision
-import numpy as np
+
 import torch
 import os
 import cv2
+import torchvision
+import numpy as np
+from PIL import Image
 import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
-from PIL import Image
+
+# from FasterRcnn_pytorch
+from vision_tools import transforms as T
+from vision_tools.engine import train_one_epoch, evaluate
+from vision_tools import utils
 from JoTools.txkj.parseXml import parse_xml
+
 
 """
 # 运行的 torch 环境
@@ -34,13 +38,15 @@ num_classes = 5
 # train on the GPU or on the CPU, if a GPU is not available
 # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 device = torch.device('cuda')
-batch_size = 10
+batch_size = 5
 # let's train it for   epochs
 num_epochs = 300
 # 指定使用 GPU
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 #
-label_dict = {"jyzm": 1, "jyzt": 2, 'wtx': 3, "other9": 4}
+label_list = ["jyzm", "jyzt", 'wtx', "other9"]
+label_dict = { label_list[i]:i+1 for i in range(len(label_list))}
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -103,49 +109,55 @@ class MarkDataset(torch.utils.data.Dataset):
         return len(self.imgs)
 
 
-# use our dataset and defined transformations
-dataset = MarkDataset(root_dir, get_transform(train=True))
-dataset_test = MarkDataset(root_dir, get_transform(train=False))
+
+if __name__ == "__main__":
+
+    # use our dataset and defined transformations
+    # todo 修改这边的 get_transform，增加一些变换进去
+    dataset = MarkDataset(root_dir, get_transform(train=True))
+    dataset_test = MarkDataset(root_dir, get_transform(train=False))
 
 
-# fixme 将数据集分为 训练集和验证集
-indices = torch.randperm(len(dataset)).tolist()
-dataset = torch.utils.data.Subset(dataset, indices[:-10])
-dataset_test = torch.utils.data.Subset(dataset_test, indices[-10:])
+    # fixme 将数据集分为 训练集和验证集
+    indices = torch.randperm(len(dataset)).tolist()
+    dataset = torch.utils.data.Subset(dataset, indices[:-10])
+    dataset_test = torch.utils.data.Subset(dataset_test, indices[-10:])
 
-# define training and validation data loaders
-data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=utils.collate_fn)
-data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, shuffle=False,  num_workers=4, collate_fn=utils.collate_fn)
+    # define training and validation data loaders
+    data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=utils.collate_fn)
+    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, shuffle=False,  num_workers=4, collate_fn=utils.collate_fn)
 
-# get the model using our helper function get_object_detection_model(num_classes)
-model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
+    # get the model using our helper function get_object_detection_model(num_classes)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
 
-# move model to the right device
-model.to(device)
+    # move model to the right device
+    model.to(device)
 
-# construct an optimizer
-params = [p for p in model.parameters() if p.requires_grad]
-optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
+    # construct an optimizer
+    params = [p for p in model.parameters() if p.requires_grad]
+    optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
 
-# 学习率管理器
-lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
+    # 学习率管理器
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
 
-# training
-for epoch in range(num_epochs):
-    # train for one epoch
-    # fixme 这边其实返回了一个类似于日志的东西，看一下其中的内容，并保存为日志文件
-    # print_freq = 50, 每 50 次进行一次打印
-    train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
-    # update the learning rate
-    lr_scheduler.step()
-    # evaluate on the test dataset
-    # evaluate(model, data_loader_test, device=device)
-    # save model
-    if epoch % 5 == 0:
-        model_path = r"./models/diy_fas_{0}.pth".format(epoch)
-        torch.save(model, model_path)
+    # training
+    for epoch in range(num_epochs):
+        # train for one epoch
+        # fixme 这边其实返回了一个类似于日志的东西，看一下其中的内容，并保存为日志文件
+        # print_freq = 50, 每 50 次进行一次打印
+        train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
+        # update the learning rate
+        lr_scheduler.step()
+        # evaluate on the test dataset
+        # evaluate(model, data_loader_test, device=device)
+        # save model
+        if epoch % 5 == 0:
+            if not os.path.exists(r"./models"):
+                os.makedirs(r"./models")
+            model_path = r"./models/diy_fas_{0}.pth".format(epoch)
+            torch.save(model, model_path)
 
-print("That's it!")
+    print("That's it!")
 
 
 

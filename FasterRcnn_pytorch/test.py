@@ -5,10 +5,11 @@ import torch
 import torchvision
 import cv2
 import os
-from JoTools.detectionResult import DeteObj, DeteRes
-from JoTools.utils.FileOperationUtil import FileOperationUtil
 import sys
 import argparse
+from JoTools.detectionResult import DeteObj, DeteRes
+from JoTools.utils.FileOperationUtil import FileOperationUtil
+
 
 
 def args_parse():
@@ -53,6 +54,7 @@ def dete_one_img(assign_img_path, assign_save_folder):
 
 if __name__ == "__main__":
 
+    # todo 可以一次跑多个模型，并得到他们的效果对比
 
     # ----------------------------------------------------------------------------------------------------------------------
     args = args_parse()
@@ -61,8 +63,9 @@ if __name__ == "__main__":
     img_folder = args['img_folder']
     conf_th = float(args['conf_th'])
     save_folder = args['save_folder']
-    label_dict = ["bg", "dense2", "other_L4kkx", 'other_fist', "K_no_lw", "other2", "other_fzc", "other7", "other8","other9", "other1", "other6", "K", "dense1", "dense3", "other3", "Lm", "KG"]
     os.environ["CUDA_VISIBLE_DEVICES"] = args['gpu_id']
+    #
+    label_dict = ["bg", "dense2", "other_L4kkx", 'other_fist', "K_no_lw", "other2", "other_fzc", "other7", "other8","other9", "other1", "other6", "K", "dense1", "dense3", "other3", "Lm", "KG"]
     # ----------------------------------------------------------------------------------------------------------------------
 
     model = torch.load(model_path)

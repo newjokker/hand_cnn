@@ -5,10 +5,10 @@ import math
 import sys
 import time
 import torch
-import utils
+from  . import utils
 import torchvision.models.detection.mask_rcnn
-from coco_utils import get_coco_api_from_dataset
-from coco_eval import CocoEvaluator
+from .coco_utils import get_coco_api_from_dataset
+from .coco_eval import CocoEvaluator
 
 """
 target 是一个 list 其中的每一个元素是字典，具体 type 如下:
@@ -90,8 +90,8 @@ def _get_iou_types(model):
 def evaluate(model, data_loader, device):
     n_threads = torch.get_num_threads()
     # FIXME remove this and make paste_masks_in_image run on the GPU
+    # cpu_device = torch.device("cpu")
     torch.set_num_threads(1)
-    cpu_device = torch.device("cpu")
     model.eval()
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'

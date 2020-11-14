@@ -43,6 +43,7 @@ class RandomHorizontalFlip(object):
                 target["keypoints"] = keypoints
         return image, target
 
+
 class ToTensor(object):
     def __call__(self, image, target):
         image = F.to_tensor(image)
