@@ -18,7 +18,7 @@ def args_parse():
     ap.add_argument("-if", "--img_folder", default=r"../img", help="")
     ap.add_argument("-ip", "--img_path", default=r"../img/test.jpg", help="")
     ap.add_argument("-m", "--model", default=r"./diy_fas_2.pth", help="")
-    ap.add_argument("-gpuID", "--gpu_id", type=str, default="2", help="")
+    ap.add_argument("-gpu", "--gpuID", type=str, default="2", help="")
     ap.add_argument("-conf", "--conf_th", type=str, default="0.35", help="")
     ap.add_argument("-save", "--save_folder", type=str, default="./res", help="")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
@@ -31,7 +31,6 @@ def dete_one_img(assign_img_path, assign_save_folder):
     img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
     img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float().cuda()
     out = model([img_tensor])
-
     # 结果处理并输出
     boxes, labels, scores = out[0]['boxes'], out[0]['labels'], out[0]['scores']
     #
@@ -48,7 +47,8 @@ def dete_one_img(assign_img_path, assign_save_folder):
     img_name = os.path.split(assign_img_path)[1]
     save_img_path = os.path.join(assign_save_folder, img_name)
     save_xml_path = save_img_path[:-4] + '.xml'
-    res.draw_dete_res(save_img_path)
+    # 传入颜色表
+    res.draw_dete_res(save_img_path, color_dict=color_dict)
     res.save_to_xml(save_xml_path)
 
 
@@ -63,9 +63,11 @@ if __name__ == "__main__":
     img_folder = args['img_folder']
     conf_th = float(args['conf_th'])
     save_folder = args['save_folder']
-    os.environ["CUDA_VISIBLE_DEVICES"] = args['gpu_id']
-    # bg 是背景
+    os.environ["CUDA_VISIBLE_DEVICES"] = args['gpuID']
+    #
     label_dict = ["bg", "jyzm", "jyzt", 'wtx', "other9"]
+    # 颜色表
+    color_dict = {"wtx":[0,0,255], "other9":[125,0,0], "jyzm":[125,125,125], "jyzt":[125,125,0]}
     # ----------------------------------------------------------------------------------------------------------------------
 
     model = torch.load(model_path)
@@ -78,6 +80,8 @@ if __name__ == "__main__":
         for img_index, each_img in enumerate(img_path_list):
             print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
             print(print_str)
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
             dete_one_img(each_img, save_folder)
     else:
         if os.path.isdir(img_path):

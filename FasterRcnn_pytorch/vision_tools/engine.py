@@ -10,6 +10,8 @@ import torchvision.models.detection.mask_rcnn
 from .coco_utils import get_coco_api_from_dataset
 from .coco_eval import CocoEvaluator
 
+# 参考 :  https://github.com/pytorch/vision/tree/master/references/detection
+
 """
 target 是一个 list 其中的每一个元素是字典，具体 type 如下:
 
@@ -102,9 +104,6 @@ def evaluate(model, data_loader, device):
 
     for images, targets in metric_logger.log_every(data_loader, 100, header):
         images = list(img.to(device) for img in images)
-
-        print('* evaluate one img')
-
         torch.cuda.synchronize()
         model_time = time.time()
         outputs = model(images)
