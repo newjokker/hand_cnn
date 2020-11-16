@@ -28,13 +28,12 @@ from JoTools.txkj.parseXml import parse_xml
 # 参考：
 """
 
-# fixme 更改为断点继续训练
 # fixme 只保存效果最好的模型
 # fixme 更改验证代码，现在验证代码太慢了 10 张图片运算要 900+ s
 # todo 实现裁剪 transform
 
 """
-* python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5
+* python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5 -se 5 -mv 4 
 """
 
 
@@ -48,7 +47,7 @@ def args_parse():
     ap.add_argument("-ep", "--epoch_num", type=int, default=300, help="")
     ap.add_argument("-bs", "--batch_size", type=int, default=5, help="")
     ap.add_argument("-am", "--assign_model", type=str, default=None, help="")
-    ap.add_argument("-mw", "--num_workers", type=int, default=12, help="")
+    ap.add_argument("-nw", "--num_workers", type=int, default=12, help="")
     ap.add_argument("-se", "--save_epoch", type=int, default=5, help="多少个 epoch 保存一次")
     ap.add_argument("-ae", "--add_epoch", type=int, default=0, help="增加的 epoch")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
@@ -71,6 +70,23 @@ def get_transform(train):
 
     return T.Compose(assign_transforms)
 
+def print_log(metric_logger):
+    """打印训练信息"""
+    lr = metric_logger.meters['lr']
+    loss = metric_logger.meters['loss']
+    loss_classifier = metric_logger.meters['loss_classifier']
+    loss_box_reg = metric_logger.meters['loss_box_reg']
+    loss_objectness = metric_logger.meters['loss_objectness']
+    loss_rpn_box_reg = metric_logger.meters['loss_rpn_box_reg']
+    #
+    print("lr : {0}".format(lr))
+    print("loss : {0}".format(loss))
+    print("loss_classifier : {0}".format(loss_classifier))
+    print("loss_box_reg : {0}".format(loss_box_reg))
+    print("loss_objectness : {0}".format(loss_objectness))
+    print("loss_rpn_box_reg : {0}".format(loss_rpn_box_reg))
+    print('-' * 50)
+
 
 
 if __name__ == "__main__":
@@ -90,7 +106,9 @@ if __name__ == "__main__":
     if save_name is None:
         save_name = os.path.split(root_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
-    label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
+    label_list = ["middle_pole", "single"]
+    # label_list = ["jyzm", "jyzt", 'wtx', "other9"]
+    # label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
     # ----------------------------------------------------------------------------------------------------------------------
     label_dict = {label_list[i]: i + 1 for i in range(len(label_list))}
     num_classes = len(label_list) + 1
@@ -130,11 +148,13 @@ if __name__ == "__main__":
     # training
     for epoch in range(num_epochs):
         # update epoch
-        epoch += add_epoch
+        epoch += add_epoch + 1
         # train for one epoch
         # fixme 这边其实返回了一个类似于日志的东西，看一下其中的内容，并保存为日志文件
         # print_freq = 50, 每 50 次进行一次打印
-        train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
+        each_metric_logger = train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
+        # print learning info
+        # print_log(each_metric_logger)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset

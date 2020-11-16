@@ -141,9 +141,10 @@ def reduce_dict(input_dict, average=True):
 
 
 class MetricLogger(object):
-    def __init__(self, delimiter="\t"):
+    def __init__(self, save_path='./log.txt',delimiter="/n"):
         self.meters = defaultdict(SmoothedValue)
         self.delimiter = delimiter
+        self.save_path = save_path
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
@@ -164,7 +165,7 @@ class MetricLogger(object):
         loss_str = []
         for name, meter in self.meters.items():
             loss_str.append(
-                "{}: {}".format(name, str(meter))
+                "\n{}: {}".format(name, str(meter))
             )
         return self.delimiter.join(loss_str)
 
@@ -188,46 +189,58 @@ class MetricLogger(object):
             log_msg = self.delimiter.join([
                 header,
                 '[{0' + space_fmt + '}/{1}]',
-                'eta: {eta}',
+                '\neta: {eta}',
                 '{meters}',
-                'time: {time}',
-                'data: {data}',
-                'max mem: {memory:.0f}'
+                '\ntime: {time}',
+                '\ndata: {data}',
+                '\nmax mem: {memory:.0f}'
             ])
         else:
             log_msg = self.delimiter.join([
                 header,
                 '[{0' + space_fmt + '}/{1}]',
-                'eta: {eta}',
+                '\neta: {eta}',
                 '{meters}',
-                'time: {time}',
-                'data: {data}'
+                '\ntime: {time}',
+                '\ndata: {data}'
             ])
         MB = 1024.0 * 1024.0
         for obj in iterable:
             data_time.update(time.time() - end)
             yield obj
             iter_time.update(time.time() - end)
-            if i % print_freq == 0 or i == len(iterable) - 1:
+            # if i % print_freq == 0 or i == len(iterable) - 1:
+            if i == len(iterable) - 1:
                 eta_seconds = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 if torch.cuda.is_available():
-                    print(log_msg.format(
+                    print_str = log_msg.format(
                         i, len(iterable), eta=eta_string,
                         meters=str(self),
                         time=str(iter_time), data=str(data_time),
-                        memory=torch.cuda.max_memory_allocated() / MB))
+                        memory=torch.cuda.max_memory_allocated() / MB)
+                    # print(log_msg.format(
+                    #     i, len(iterable), eta=eta_string,
+                    #     meters=str(self),
+                    #     time=str(iter_time), data=str(data_time),
+                    #     memory=torch.cuda.max_memory_allocated() / MB))
                 else:
-                    print(log_msg.format(
+                    print_str = log_msg.format(
                         i, len(iterable), eta=eta_string,
                         meters=str(self),
-                        time=str(iter_time), data=str(data_time)))
+                        time=str(iter_time), data=str(data_time))
+
+                    # print(log_msg.format(
+                    #     i, len(iterable), eta=eta_string,
+                    #     meters=str(self),
+                    #     time=str(iter_time), data=str(data_time)))
+                print(print_str)
             i += 1
             end = time.time()
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-        print('{} Total time: {} ({:.4f} s / it)'.format(
-            header, total_time_str, total_time / len(iterable)))
+        print('{} Total time: {} ({:.4f} s / it)'.format(header, total_time_str, total_time / len(iterable)))
+        print('-'*50)
 
 
 def collate_fn(batch):

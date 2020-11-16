@@ -15,10 +15,10 @@ from JoTools.utils.FileOperationUtil import FileOperationUtil
 def args_parse():
     """参数解析"""
     ap = argparse.ArgumentParser()
-    ap.add_argument("-if", "--img_folder", default=r"../img", help="")
+    ap.add_argument("-id", "--img_dir", default=r"../img", help="")
     ap.add_argument("-ip", "--img_path", default=r"../img/test.jpg", help="")
-    ap.add_argument("-m", "--model", default=r"./diy_fas_2.pth", help="")
-    ap.add_argument("-gpuID", "--gpu_id", type=str, default="2", help="")
+    ap.add_argument("-am", "--assign_model", default=r"./diy_fas_2.pth", help="")
+    ap.add_argument("-gpu", "--gpuID", type=str, default="2", help="")
     ap.add_argument("-conf", "--conf_th", type=str, default="0.35", help="")
     ap.add_argument("-save", "--save_folder", type=str, default="./res", help="")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
@@ -40,7 +40,7 @@ def dete_one_img(assign_img_path, assign_save_folder):
         if float(scores[index]) > conf_th:
             x1, y1, x2, y2 = int(each_box[0]), int(each_box[1]), int(each_box[2]), int(each_box[3])
             conf, tag_index = float(scores[index]), str(labels[index].item())
-            res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_dict[int(tag_index)+1])
+            res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_list[int(tag_index) - 1])
 
     # nms
     res.do_nms(0.1)
@@ -48,24 +48,30 @@ def dete_one_img(assign_img_path, assign_save_folder):
     img_name = os.path.split(assign_img_path)[1]
     save_img_path = os.path.join(assign_save_folder, img_name)
     save_xml_path = save_img_path[:-4] + '.xml'
-    res.draw_dete_res(save_img_path)
+    res.draw_dete_res(save_img_path, color_dict=color_dict)
     res.save_to_xml(save_xml_path)
 
 
 if __name__ == "__main__":
 
     # todo 可以一次跑多个模型，并得到他们的效果对比
+    # python3 test.py -am ./model/test.pth -id ./imgs -gpu 2 -save ./res
 
     # ----------------------------------------------------------------------------------------------------------------------
     args = args_parse()
-    model_path = args['model']
+    model_path = args['assign_model']
     img_path = args['img_path']
-    img_folder = args['img_folder']
+    img_folder = args['img_dir']
     conf_th = float(args['conf_th'])
     save_folder = args['save_folder']
-    os.environ["CUDA_VISIBLE_DEVICES"] = args['gpu_id']
+    if not os.path.exists(save_folder): os.makedirs(save_folder)
+    os.environ["CUDA_VISIBLE_DEVICES"] = args['gpuID']
     # bg 是背景
-    label_dict = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
+    # label_dict = ["middle_pole", "single"]
+    # label_dict = ["bg", "jyzm", "jyzt", 'wtx', "other9"]
+    # label_dict = ["bg", "dense2", "other_L4kkx", 'other_fist', "K_no_lw", "other2", "other_fzc", "other7", "other8","other9", "other1", "other6", "K", "dense1", "dense3", "other3", "Lm", "KG"]
+    label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
+    color_dict = {"fzc_yt": [0, 0, 255], "fzc_sm": [0, 0, 255], "fzc_gt": [0, 0, 125]}
     # ----------------------------------------------------------------------------------------------------------------------
 
     model = torch.load(model_path)
