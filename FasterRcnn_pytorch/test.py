@@ -40,7 +40,7 @@ def dete_one_img(assign_img_path, assign_save_folder):
         if float(scores[index]) > conf_th:
             x1, y1, x2, y2 = int(each_box[0]), int(each_box[1]), int(each_box[2]), int(each_box[3])
             conf, tag_index = float(scores[index]), str(labels[index].item())
-            res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_dict[int(tag_index)])
+            res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_dict[int(tag_index)+1])
 
     # nms
     res.do_nms(0.1)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     save_folder = args['save_folder']
     os.environ["CUDA_VISIBLE_DEVICES"] = args['gpu_id']
     # bg 是背景
-    label_dict = ["bg", "jyzm", "jyzt", 'wtx', "other9"]
+    label_dict = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
     # ----------------------------------------------------------------------------------------------------------------------
 
     model = torch.load(model_path)

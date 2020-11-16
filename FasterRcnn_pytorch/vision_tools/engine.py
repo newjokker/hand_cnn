@@ -93,6 +93,7 @@ def evaluate(model, data_loader, device):
     n_threads = torch.get_num_threads()
     # FIXME remove this and make paste_masks_in_image run on the GPU
     # cpu_device = torch.device("cpu")
+    cpu_device = torch.device("cuda")
     torch.set_num_threads(1)
     model.eval()
     metric_logger = utils.MetricLogger(delimiter="  ")

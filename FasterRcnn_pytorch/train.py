@@ -4,6 +4,7 @@
 import torch
 import os
 import cv2
+import time
 import argparse
 import torchvision
 import numpy as np
@@ -20,6 +21,7 @@ from JoTools.txkj.parseXml import parse_xml
 
 """
 # 运行的 torch 环境
+    * python 3.6.10 
     * torch-1.5.0+cu101-cp36-cp36m-linux_x86_64.whl
     * torchvision-0.6.0+cu101-cp36-cp36m-linux_x86_64.whl
 # 当前代码验证部分是 cpu 跑的，所以会特别慢
@@ -28,6 +30,8 @@ from JoTools.txkj.parseXml import parse_xml
 
 # fixme 更改为断点继续训练
 # fixme 只保存效果最好的模型
+# fixme 更改验证代码，现在验证代码太慢了 10 张图片运算要 900+ s
+# todo 实现裁剪 transform
 
 """
 * python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5
@@ -43,6 +47,7 @@ def args_parse():
     ap.add_argument("-sn", "--save_name", type=str, default=None, help="")
     ap.add_argument("-ep", "--epoch_num", type=int, default=300, help="")
     ap.add_argument("-bs", "--batch_size", type=int, default=5, help="")
+    ap.add_argument("-am", "--assign_model", type=str, default=None, help="")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
     return assign_args
 
@@ -74,13 +79,14 @@ if __name__ == "__main__":
     batch_size = args["batch_size"]
     num_epochs = args["epoch_num"]
     os.environ["CUDA_VISIBLE_DEVICES"] = args["gpuID"]
-    num_workers = 12
+    # fixme num_works 多了之后就会报错，显示为内存不足，看看原因
+    num_workers = 2
     save_dir = args["save_folder"]
     save_name = args["save_name"]
     if save_name is None:
         save_name = os.path.split(save_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
-    label_list = ["jyzm", "jyzt", 'wtx', "other9"]
+    label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
     # ----------------------------------------------------------------------------------------------------------------------
     label_dict = {label_list[i]: i + 1 for i in range(len(label_list))}
     num_classes = len(label_list) + 1
@@ -90,6 +96,7 @@ if __name__ == "__main__":
     train_dataset = GetDataset(root_dir, label_dict, get_transform(train=True))
     dataset_test = GetDataset(root_dir, label_dict, get_transform(train=False))
 
+    # fixme 这边应该直接改为一定的比例进行训练，而不是多少个
     # get train_dataset, test_dataset
     indices = torch.randperm(len(train_dataset)).tolist()
     train_dataset = torch.utils.data.Subset(train_dataset, indices[:-10])
@@ -100,7 +107,10 @@ if __name__ == "__main__":
     data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, shuffle=False,  num_workers=num_workers, collate_fn=utils.collate_fn)
 
     # get model
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
+    if args["assign_model"] is None:
+        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
+    else:
+        model = torch.load(args["assign_model"])
     model.to(device)
 
     # construct an optimizer
@@ -119,8 +129,8 @@ if __name__ == "__main__":
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
-        if evaluate % 20 ==0:
-            evaluate(model, data_loader_test, device=device)
+        #if evaluate % 20 ==0:
+        # evaluate(model, data_loader_test, device=device)
         # save model
         if epoch % 5 == 0:
             if not os.path.exists(save_dir):
