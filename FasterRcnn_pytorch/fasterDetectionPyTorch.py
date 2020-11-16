@@ -129,20 +129,33 @@ class EfficientdetDetection(detection):
         self.log.info(self.modelName + ' detection start')
         use_float16 = False
         # 这边 jokker 修改过，将输入图片改为输入矩阵
-        ori_imgs, framed_imgs, framed_metas = preprocess_jokker(im, max_size=self.inputSizes)
-        x = torch.stack([torch.from_numpy(fi).cuda() for fi in framed_imgs], 0)  #
-        x = x.to(torch.float32 if not use_float16 else torch.float16).permute(0, 3, 1, 2)  #
 
-        with torch.no_grad():
-            features, regression, classification, anchors = self.net(x)
-            regressBoxes = BBoxTransform()
-            clipBoxes = ClipBoxes()
-            out = postprocess(x, anchors, regression, classification, regressBoxes, clipBoxes, self.confThresh,
-                              self.iouThresh)
+        # fixme 看看测试的时候放进来的图片是都进行了规范，
 
-        out = invert_affine(framed_metas, out)  # 映射到原数据范围
-        res = self.display(out, ori_imgs)
-        self.log.info('after  filters:{0}\n'.format(res))
+        img_tensor = torch.from_numpy(im / 255.).float().cuda()
+        out = model([img_tensor])
+
+        # 结果处理并输出
+        boxes, labels, scores = out[0]['boxes'], out[0]['labels'], out[0]['scores']
+        #
+        res.append([obj, j, int(x1), int(y1), int(x2), int(y2), str(score)])
+
+
+
+        # ori_imgs, framed_imgs, framed_metas = preprocess_jokker(im, max_size=self.inputSizes)
+        # x = torch.stack([torch.from_numpy(fi).cuda() for fi in framed_imgs], 0)  #
+        # x = x.to(torch.float32 if not use_float16 else torch.float16).permute(0, 3, 1, 2)  #
+        #
+        # with torch.no_grad():
+        #     features, regression, classification, anchors = self.net(x)
+        #     regressBoxes = BBoxTransform()
+        #     clipBoxes = ClipBoxes()
+        #     out = postprocess(x, anchors, regression, classification, regressBoxes, clipBoxes, self.confThresh,
+        #                       self.iouThresh)
+        #
+        # out = invert_affine(framed_metas, out)  # 映射到原数据范围
+        # res = self.display(out, ori_imgs)
+        # self.log.info('after  filters:{0}\n'.format(res))
         return res
 
     @try_except()

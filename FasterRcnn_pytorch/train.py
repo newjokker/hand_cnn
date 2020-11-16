@@ -43,11 +43,14 @@ def args_parse():
     ap = argparse.ArgumentParser()
     ap.add_argument("-rd", "--root_dir", type=str)
     ap.add_argument("-gpu", "--gpuID", type=str, default="2", help="")
-    ap.add_argument("-sf", "--save_folder", type=str, default="./res", help="")
+    ap.add_argument("-sd", "--save_dir", type=str, default="./res", help="")
     ap.add_argument("-sn", "--save_name", type=str, default=None, help="")
     ap.add_argument("-ep", "--epoch_num", type=int, default=300, help="")
     ap.add_argument("-bs", "--batch_size", type=int, default=5, help="")
     ap.add_argument("-am", "--assign_model", type=str, default=None, help="")
+    ap.add_argument("-mw", "--num_workers", type=int, default=12, help="")
+    ap.add_argument("-se", "--save_epoch", type=int, default=5, help="多少个 epoch 保存一次")
+    ap.add_argument("-ae", "--add_epoch", type=int, default=0, help="增加的 epoch")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
     return assign_args
 
@@ -80,11 +83,12 @@ if __name__ == "__main__":
     num_epochs = args["epoch_num"]
     os.environ["CUDA_VISIBLE_DEVICES"] = args["gpuID"]
     # fixme num_works 多了之后就会报错，显示为内存不足，看看原因
-    num_workers = 2
-    save_dir = args["save_folder"]
+    num_workers = args["num_workers"]
+    save_dir = args["save_dir"]
     save_name = args["save_name"]
+    save_epoch = args["save_epoch"]
     if save_name is None:
-        save_name = os.path.split(save_dir)[1]
+        save_name = os.path.split(root_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
     label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
     # ----------------------------------------------------------------------------------------------------------------------
@@ -107,10 +111,13 @@ if __name__ == "__main__":
     data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, shuffle=False,  num_workers=num_workers, collate_fn=utils.collate_fn)
 
     # get model
+    add_epoch = 0
     if args["assign_model"] is None:
         model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
     else:
         model = torch.load(args["assign_model"])
+        add_epoch = args["add_epoch"]
+
     model.to(device)
 
     # construct an optimizer
@@ -122,6 +129,8 @@ if __name__ == "__main__":
 
     # training
     for epoch in range(num_epochs):
+        # update epoch
+        epoch += add_epoch
         # train for one epoch
         # fixme 这边其实返回了一个类似于日志的东西，看一下其中的内容，并保存为日志文件
         # print_freq = 50, 每 50 次进行一次打印
@@ -132,7 +141,7 @@ if __name__ == "__main__":
         #if evaluate % 20 ==0:
         # evaluate(model, data_loader_test, device=device)
         # save model
-        if epoch % 5 == 0:
+        if epoch % save_epoch == 0:
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             model_path = os.path.join(save_dir, "{0}_{1}_{2}.pth".format(save_name, epoch, epoch*len(data_loader_train)))
