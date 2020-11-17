@@ -4,7 +4,8 @@
 import torch
 import os
 import cv2
-import time
+import datetime
+import sys
 import argparse
 import torchvision
 import numpy as np
@@ -31,6 +32,7 @@ from JoTools.txkj.parseXml import parse_xml
 # fixme 只保存效果最好的模型
 # fixme 更改验证代码，现在验证代码太慢了 10 张图片运算要 900+ s
 # todo 实现裁剪 transform
+# todo 增加训练日志，记录每一次训练使用的语句
 
 """
 * python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5 -se 5 -mv 4 
@@ -87,11 +89,22 @@ def print_log(metric_logger):
     print("loss_rpn_box_reg : {0}".format(loss_rpn_box_reg))
     print('-' * 50)
 
+def save_train_log(train_log_folder):
+    """记录训练命令"""
+    if not os.path.exists(train_log_folder): os.makedirs(train_log_folder)
+    train_log_path = os.path.join(train_log_folder, 'train_log.txt')
+    time_str = datetime.datetime.strftime(datetime.datetime.now() + datetime.timedelta(hours=13), "%Y-%m-%d-%H:%M:%S")
+    with open(train_log_path, 'a') as txt_file:
+        txt_file.write(time_str + " : ")
+        txt_file.write(" ".join(sys.argv))
+        txt_file.write("\n")
 
 
 if __name__ == "__main__":
 
     args = args_parse()
+    train_log_dir = "./logs"
+    save_train_log(train_log_dir)
     # ----------------------------------------------------------------------------------------------------------------------
     root_dir = args["root_dir"]
     device = torch.device('cuda')
