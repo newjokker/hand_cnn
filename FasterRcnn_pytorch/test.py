@@ -3,6 +3,7 @@
 
 import torch
 import torchvision
+import datetime
 import cv2
 import os
 import sys
@@ -52,26 +53,39 @@ def dete_one_img(assign_img_path, assign_save_folder):
     res.save_to_xml(save_xml_path)
 
 
+def save_test_log(train_log_folder):
+    """记录训练命令"""
+    if not os.path.exists(train_log_folder): os.makedirs(train_log_folder)
+    train_log_path = os.path.join(train_log_folder, 'test_log.txt')
+    time_str = datetime.datetime.strftime(datetime.datetime.now() + datetime.timedelta(hours=13), "%Y-%m-%d-%H:%M:%S")
+    with open(train_log_path, 'a') as txt_file:
+        txt_file.write(time_str + " : ")
+        txt_file.write(" ".join(sys.argv))
+        txt_file.write("\n")
+
+
+
 if __name__ == "__main__":
 
     # todo 可以一次跑多个模型，并得到他们的效果对比
     # python3 test.py -am ./model/test.pth -id ./imgs -gpu 2 -save ./res
 
-    # ----------------------------------------------------------------------------------------------------------------------
     args = args_parse()
+    save_test_log("./logs")
+    # ----------------------------------------------------------------------------------------------------------------------
     model_path = args['assign_model']
     img_path = args['img_path']
-    img_folder = args['img_dir']
+    img_folder = args['img_dir'].strip('/')
     conf_th = float(args['conf_th'])
     save_folder = args['save_folder']
     if not os.path.exists(save_folder): os.makedirs(save_folder)
     os.environ["CUDA_VISIBLE_DEVICES"] = args['gpuID']
     # bg 是背景
-    # label_dict = ["middle_pole", "single"]
-    # label_dict = ["bg", "jyzm", "jyzt", 'wtx', "other9"]
-    # label_dict = ["bg", "dense2", "other_L4kkx", 'other_fist', "K_no_lw", "other2", "other_fzc", "other7", "other8","other9", "other1", "other6", "K", "dense1", "dense3", "other3", "Lm", "KG"]
+    # label_list = ["middle_pole", "single"]
+    # label_list = ["bg", "jyzm", "jyzt", 'wtx', "other9"]
+    # label_list = ["bg", "dense2", "other_L4kkx", 'other_fist', "K_no_lw", "other2", "other_fzc", "other7", "other8","other9", "other1", "other6", "K", "dense1", "dense3", "other3", "Lm", "KG"]
     label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
-    color_dict = {"fzc_yt": [0, 0, 255], "fzc_sm": [0, 0, 255], "fzc_gt": [0, 0, 125]}
+    color_dict = {"middle_pole": [0, 0, 255], "single": [0, 255, 0]}
     # ----------------------------------------------------------------------------------------------------------------------
 
     model = torch.load(model_path)

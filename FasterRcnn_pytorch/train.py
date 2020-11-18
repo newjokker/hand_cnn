@@ -44,7 +44,7 @@ def args_parse():
     ap = argparse.ArgumentParser()
     ap.add_argument("-rd", "--root_dir", type=str)
     ap.add_argument("-gpu", "--gpuID", type=str, default="2", help="")
-    ap.add_argument("-sd", "--save_dir", type=str, default="./res", help="")
+    ap.add_argument("-sd", "--save_dir", type=str, default="./models", help="")
     ap.add_argument("-sn", "--save_name", type=str, default=None, help="")
     ap.add_argument("-ep", "--epoch_num", type=int, default=300, help="")
     ap.add_argument("-bs", "--batch_size", type=int, default=5, help="")
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     train_log_dir = "./logs"
     save_train_log(train_log_dir)
     # ----------------------------------------------------------------------------------------------------------------------
-    root_dir = args["root_dir"]
+    root_dir = args["root_dir"].strip('/')
     device = torch.device('cuda')
     batch_size = args["batch_size"]
     num_epochs = args["epoch_num"]
@@ -119,9 +119,10 @@ if __name__ == "__main__":
     if save_name is None:
         save_name = os.path.split(root_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
-    label_list = ["middle_pole", "single"]
+    # label_list = ["middle_pole", "single"]
+    # label_list = ["ls_lm"]
     # label_list = ["jyzm", "jyzt", 'wtx', "other9"]
-    # label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
+    label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
     # ----------------------------------------------------------------------------------------------------------------------
     label_dict = {label_list[i]: i + 1 for i in range(len(label_list))}
     num_classes = len(label_list) + 1

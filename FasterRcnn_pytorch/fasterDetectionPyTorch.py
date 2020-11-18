@@ -17,22 +17,14 @@ from ..detect_libs.abstractBase import detection
 from torch.backends import cudnn
 
 
-# from ..efficientdet_lib.backbone import EfficientDetBackbone
-# from ..efficientdet_lib.efficientdet.utils import BBoxTransform, ClipBoxes
-# from ..efficientdet_lib.N_utils.utils import invert_affine, postprocess, preprocess_jokker
-# from ..efficientdet_lib.N_utils.parseXml import ParseXml, parse_xml
 
+class FasterDetectionPytorch(detection):
 
-class EfficientdetDetection(detection):
-
-    def __init__(self, args, cfgPath, modelPath, objName, scriptName):
-        super(EfficientdetDetection, self).__init__(objName, scriptName)
+    def __init__(self, args, objName=None, scriptName=None):
+        super(FasterDetectionPytorch, self).__init__(objName, scriptName)
         self.encryption = False
         self.readArgs(args)
-        self.objName = objName
-        self.cfgPath = cfgPath
         self.readCfg()
-        self.modelPath = modelPath
         self.args = args
         self.log = detlog(self.modelName, self.objName, self.logID)
 
@@ -49,17 +41,12 @@ class EfficientdetDetection(detection):
         self.cf = configparser.ConfigParser()
         self.cf.read(self.cfgPath)
         self.modelName = self.cf.get('common', 'model')
-
-        # self.encryption = self.cf.getboolean("common", 'encryption')
-        # self.demonet = self.cf.get(self.objName, 'net')
-        # self.SCALES = (int(self.cf.get(self.objName, 'test_minsize')),)
-        # self.MAX_SIZE = int(self.cf.get(self.objName, 'test_maxsize'))
-
         self.debug = self.cf.getboolean("common", 'debug')
-        self.tfmodelName = self.cf.get(self.objName, 'model_name')
+        # fixme 这边要和之前的规范进行统一
+        self.tfmodelName = self.cf.get(self.objName, 'modelname')
         self.dataset = self.cf.get(self.objName, 'dataset')
-        self.anchorScales = eval(self.cf.get(self.objName, "anchor_scales"))
-        self.anchorRatios = eval(self.cf.get(self.objName, "anchor_satios"))
+        self.anchorScales = eval(self.cf.get(self.objName, "anchorscales"))
+        self.anchorRatios = eval(self.cf.get(self.objName, "anchorsatios"))
         self.CLASSES = tuple(self.cf.get(self.objName, 'classes').strip(',').split(','))
         self.VISIBLE_CLASSES = tuple(self.cf.get(self.objName, 'visible_classes').strip(',').split(','))
         self.confThresh = self.cf.getfloat(self.objName, 'conf_threshold')
@@ -67,30 +54,19 @@ class EfficientdetDetection(detection):
         self.compoundCoef = int(self.cf.getfloat(self.objName, 'compound_coef'))
         self.inputSizes = [512, 640, 768, 896, 1024, 1280, 1280, 1536][self.compoundCoef]
         self.encryption = self.cf.getboolean("common", 'encryption')
-
         print(self.cf.getboolean("common", 'encryption'))
-
-        # todo 新增长宽比
-        # todo 新增距离边界的长度
 
     @try_except()
     def model_restore(self):
         self.log.info('===== model restore start =====')
-
         # 加密模型
-
+        model_path = os.path.join(self.modelPath, self.tfmodelName)
         print("self.encryption:", self.encryption)
-
-        if self.encryption:
-            model_path = self.dncryptionModel()
-        else:
-            model_path = os.path.join(self.modelPath, self.tfmodelName)
-
         print(model_path)
 
-        # torch.cuda.set_device(self.gpuID) # 指定 GPU id
-        cudnn.fastest = True
-        cudnn.benchmark = True
+        # fixme 下面两个不注释的话，会占用大量的 gpu
+        # cudnn.fastest = True
+        # cudnn.benchmark = True
         self.net = torch.load(model_path)
         self.net.eval()
         self.net.cuda()
@@ -101,7 +77,6 @@ class EfficientdetDetection(detection):
         if self.encryption:
             self.log.info(model_path)
             self.delDncryptionModel(model_path)
-
         return
 
     @try_except()
@@ -127,35 +102,25 @@ class EfficientdetDetection(detection):
     def detect(self, im, image_name="default.jpg"):
         self.log.info('=========================')
         self.log.info(self.modelName + ' detection start')
-        use_float16 = False
-        # 这边 jokker 修改过，将输入图片改为输入矩阵
-
-        # fixme 看看测试的时候放进来的图片是都进行了规范，
-
-        img_tensor = torch.from_numpy(im / 255.).float().cuda()
-        out = model([img_tensor])
-
+        img_tensor = torch.from_numpy(im / 255.).permute(2, 0, 1).float().cuda()
+        out = self.net([img_tensor])
+        res = []
         # 结果处理并输出
         boxes, labels, scores = out[0]['boxes'], out[0]['labels'], out[0]['scores']
-        #
-        res.append([obj, j, int(x1), int(y1), int(x2), int(y2), str(score)])
 
+        index = 0
+        for i in range(len(boxes)):
+            x1, y1, x2, y2 = boxes[i]
+            score = scores[i].item()
+            if score > self.confThresh:
+                index += 1
+                obj = self.CLASSES[labels[i].item()-1]
+                res.append([obj, index, int(x1), int(y1), int(x2), int(y2), str(score)])
 
+        # for each in res:
+        #     print(each)
+        #     print('-'*20)
 
-        # ori_imgs, framed_imgs, framed_metas = preprocess_jokker(im, max_size=self.inputSizes)
-        # x = torch.stack([torch.from_numpy(fi).cuda() for fi in framed_imgs], 0)  #
-        # x = x.to(torch.float32 if not use_float16 else torch.float16).permute(0, 3, 1, 2)  #
-        #
-        # with torch.no_grad():
-        #     features, regression, classification, anchors = self.net(x)
-        #     regressBoxes = BBoxTransform()
-        #     clipBoxes = ClipBoxes()
-        #     out = postprocess(x, anchors, regression, classification, regressBoxes, clipBoxes, self.confThresh,
-        #                       self.iouThresh)
-        #
-        # out = invert_affine(framed_metas, out)  # 映射到原数据范围
-        # res = self.display(out, ori_imgs)
-        # self.log.info('after  filters:{0}\n'.format(res))
         return res
 
     @try_except()
