@@ -2,7 +2,8 @@ import random
 import torch
 import numpy as np
 from torchvision.transforms import functional as F
-
+from PIL import Image
+import torch.nn.functional as nnf
 
 """
 target 是一个 list 其中的每一个元素是字典，具体 type 如下:
@@ -94,6 +95,26 @@ class RandomChangechannelOrder(object):
             image[a,:,:], image[b,:,:] = image[b,:,:], image[a,:,:]
         return image, target
 
+
+class RandomResize(object):
+    """对图片随机进行下采样，1-3 倍"""
+
+    def __init__(self, prob):
+        self.prob = prob
+
+    def __call__(self, image, target):
+        if random.random() < self.prob:
+            # random resize ratio
+            img_ratio = random.randint(30, 100)*0.01
+            height, width = image.shape[1:]
+            # 将 tensor resize
+            image = image.unsqueeze(0)
+            image = nnf.interpolate(image, size=(height, width))
+            image = image.squeeze(0)
+            #
+            for each_box in target["boxes"]:
+                each_box *= img_ratio
+        return image, target
 
 # ----------------------------------------------------------------------------------------------------------------------
 

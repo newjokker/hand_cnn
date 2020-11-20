@@ -45,14 +45,14 @@ class FasterDetectionPytorch(detection):
         # fixme 这边要和之前的规范进行统一
         self.tfmodelName = self.cf.get(self.objName, 'modelname')
         self.dataset = self.cf.get(self.objName, 'dataset')
-        self.anchorScales = eval(self.cf.get(self.objName, "anchorscales"))
-        self.anchorRatios = eval(self.cf.get(self.objName, "anchorsatios"))
+        # self.anchorScales = eval(self.cf.get(self.objName, "anchorscales"))
+        # self.anchorRatios = eval(self.cf.get(self.objName, "anchorsatios"))
         self.CLASSES = tuple(self.cf.get(self.objName, 'classes').strip(',').split(','))
         self.VISIBLE_CLASSES = tuple(self.cf.get(self.objName, 'visible_classes').strip(',').split(','))
         self.confThresh = self.cf.getfloat(self.objName, 'conf_threshold')
         self.iouThresh = self.cf.getfloat(self.objName, 'iou_threshold')
-        self.compoundCoef = int(self.cf.getfloat(self.objName, 'compound_coef'))
-        self.inputSizes = [512, 640, 768, 896, 1024, 1280, 1280, 1536][self.compoundCoef]
+        # self.compoundCoef = int(self.cf.getfloat(self.objName, 'compound_coef'))
+        # self.inputSizes = [512, 640, 768, 896, 1024, 1280, 1280, 1536][self.compoundCoef]
         self.encryption = self.cf.getboolean("common", 'encryption')
         print(self.cf.getboolean("common", 'encryption'))
 
@@ -81,7 +81,7 @@ class FasterDetectionPytorch(detection):
 
     @try_except()
     def warmUp(self):
-        im = 128 * np.ones((self.inputSizes, self.inputSizes, 3), dtype=np.uint8)
+        im = 128 * np.ones((1000, 1000, 3), dtype=np.uint8)
         self.detect(im, 'warmup.jpg')
 
     def display(self, preds, imgs):

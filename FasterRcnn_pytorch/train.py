@@ -69,6 +69,8 @@ def get_transform(train):
         assign_transforms.append(T.RandomChangechannelOrder(0.5))
         # 增加噪声
         # assign_transforms.append(T.AddGasussNoise(0.5))
+        # 增加改变图像大小
+        assign_transforms.append(T.RandomResize(0.8))
 
     return T.Compose(assign_transforms)
 
