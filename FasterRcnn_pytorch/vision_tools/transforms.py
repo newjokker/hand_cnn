@@ -4,6 +4,10 @@ import numpy as np
 from torchvision.transforms import functional as F
 from PIL import Image
 import torch.nn.functional as nnf
+from torchvision.transforms import transforms
+
+
+# fixme 能将图片和 box 一起传入进行处理 albumentations
 
 """
 target 是一个 list 其中的每一个元素是字典，具体 type 如下:
@@ -25,7 +29,6 @@ target 是一个 list 其中的每一个元素是字典，具体 type 如下:
           4158.,   3036.,   2665.], device='cuda:0'), 
           'iscrowd': tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], device='cuda:0')}
 """
-
 
 
 def _flip_coco_person_keypoints(kps, width):
@@ -50,8 +53,19 @@ class Compose(object):
 
 class ToTensor(object):
     def __call__(self, image, target):
+        image = Image.fromarray(image)
         image = F.to_tensor(image)
         return image, target
+
+
+class ImageToNumpy(object):
+    def __call__(self, image, target):
+        image = np.array(image)
+        return image, target
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# fixme 输入的是 Image 结构，输出的 是 Image 结构,中间使用 numpy
 
 
 class RandomHorizontalFlip(object):
@@ -61,8 +75,8 @@ class RandomHorizontalFlip(object):
 
     def __call__(self, image, target):
         if random.random() < self.prob:
-            height, width = image.shape[-2:]
-            image = image.flip(-1)
+            height, width = image.shape[:2]
+            image = np.flip(image, -1)
             bbox = target["boxes"]
             bbox[:, [0, 2]] = width - bbox[:, [2, 0]]
             target["boxes"] = bbox
@@ -78,7 +92,8 @@ class RandomChangeImgLight(object):
     def __call__(self, image, target):
         if random.random() < self.prob:
             # 设置增强系数为 0.5 - 1.5
-            image *= random.randrange(50, 150) * 0.01
+            image = image * (random.randrange(50, 150) * 0.01)
+            image = image.astype(np.uint8)
             image[image>255] = 255
         return image, target
 
@@ -91,6 +106,7 @@ class RandomChangechannelOrder(object):
 
     def __call__(self, image, target):
         if random.random() < self.prob:
+            # image = np.array(image)
             a, b = random.sample([0,1,2], 2)
             image[a,:,:], image[b,:,:] = image[b,:,:], image[a,:,:]
         return image, target
@@ -105,18 +121,31 @@ class RandomResize(object):
     def __call__(self, image, target):
         if random.random() < self.prob:
             # random resize ratio
+            # image = np.array(image)
             img_ratio = random.randint(30, 100)*0.01
-            height, width = image.shape[1:]
+            height, width = image.shape[:2]
             # 将 tensor resize
-            image = image.unsqueeze(0)
-            image = nnf.interpolate(image, size=(height, width))
-            image = image.squeeze(0)
+            # print(image.shape)
+            image = np.resize(image, (int(height*img_ratio), int(width*img_ratio), 3))
+            # print(image.shape)
+            # print('-'*50)
+            # image = image.unsqueeze(0)
+            # image = nnf.interpolate(image, size=(height, width))
+            # image = image.squeeze(0)
             #
             for each_box in target["boxes"]:
+                # print(each_box)
+                # print(each_box.dtype)
+                # fixme 这边要转为 整数，传过来的 box 位置是 负值
                 each_box *= img_ratio
+                each_box = each_box.type(torch.int64)
+                each_box = each_box.type(torch.float)
+                # print(img_ratio)
+                # print(each_box)
+                # print(each_box.dtype)
+                # print('-'*20)
         return image, target
 
-# ----------------------------------------------------------------------------------------------------------------------
 
 class AddGasussNoise(object):
     """增加高斯噪声"""
@@ -129,13 +158,16 @@ class AddGasussNoise(object):
     def __call__(self, image, target):
         if random.random() < self.prob:
             # 设置增强系数为 0.5 - 1.5
+            image = np.array(image)
             image = image/255.0
             noise = np.random.normal(self.mean, self.var ** 0.5, image.shape)
-            # fixme 下面的几个操作会破坏 tensor 数据结构
             image = image + noise
             image = np.clip(image, 0, 1.0)
             image = np.uint8(image * 255)
         return image, target
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class RandomVerticalFlip(object):

@@ -57,8 +57,9 @@ def args_parse():
 
 def get_transform(train):
     # converts the image, a PIL image, into a PyTorch Tensor
-    assign_transforms = [T.ToTensor()]
-    # assign_transforms.append(T.ToTensor())
+    # fixme 这边先将图像结构转为 numpy 处理后再转为 tensor
+    # todo target 要做同样的处理，先处理为 tensor 难以操作
+    assign_transforms = [T.ImageToNumpy()]
 
     if train:
         # 水平旋转
@@ -68,9 +69,12 @@ def get_transform(train):
         # 改变通道顺序
         assign_transforms.append(T.RandomChangechannelOrder(0.5))
         # 增加噪声
-        # assign_transforms.append(T.AddGasussNoise(0.5))
+        assign_transforms.append(T.AddGasussNoise(0.5))
         # 增加改变图像大小
         assign_transforms.append(T.RandomResize(0.8))
+
+    # 转变为 tensor
+    assign_transforms.append(T.ToTensor())
 
     return T.Compose(assign_transforms)
 
