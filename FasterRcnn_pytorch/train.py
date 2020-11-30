@@ -25,6 +25,10 @@ from JoTools.txkj.parseXml import parse_xml
     * python 3.6.10 
     * torch-1.5.0+cu101-cp36-cp36m-linux_x86_64.whl
     * torchvision-0.6.0+cu101-cp36-cp36m-linux_x86_64.whl
+    * python 3.5.6
+    * torch-1.5.0+cu92-cp35-cp35m-linux_x86_64
+    * torchvision-0.6.0+cu92-cp35-cp35m-linux_x86_64
+    
 # 当前代码验证部分是 cpu 跑的，所以会特别慢
 # 参考：
 """

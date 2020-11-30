@@ -20,7 +20,7 @@ def args_parse():
     ap.add_argument("-ip", "--img_path", default=r"../img/test.jpg", help="")
     ap.add_argument("-am", "--assign_model", default=r"./diy_fas_2.pth", help="")
     ap.add_argument("-gpu", "--gpuID", type=str, default="2", help="")
-    ap.add_argument("-conf", "--conf_th", type=str, default="0.35", help="")
+    ap.add_argument("-conf", "--conf_th", type=float, default="0.35", help="")
     ap.add_argument("-save", "--save_folder", type=str, default="./res", help="")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
     return assign_args
@@ -38,7 +38,7 @@ def dete_one_img(assign_img_path, assign_save_folder):
     #
     res = DeteRes(assign_img_path=assign_img_path)
     for index, each_box in enumerate(boxes):
-        if float(scores[index]) > conf_th:
+        if float(scores[index]) > float(conf_th):
             x1, y1, x2, y2 = int(each_box[0]), int(each_box[1]), int(each_box[2]), int(each_box[3])
             conf, tag_index = float(scores[index]), str(labels[index].item())
             res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_list[int(tag_index) - 1])
