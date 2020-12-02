@@ -60,6 +60,7 @@ def save_test_log(train_log_folder):
     time_str = datetime.datetime.strftime(datetime.datetime.now() + datetime.timedelta(hours=13), "%Y-%m-%d-%H:%M:%S")
     with open(train_log_path, 'a') as txt_file:
         txt_file.write(time_str + " : ")
+        txt_file.write("python3 ")
         txt_file.write(" ".join(sys.argv))
         txt_file.write("\n")
 
