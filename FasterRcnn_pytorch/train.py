@@ -117,7 +117,7 @@ if __name__ == "__main__":
     train_log_dir = "./logs"
     save_train_log(train_log_dir)
     # ----------------------------------------------------------------------------------------------------------------------
-    root_dir = args["root_dir"].strip('/')
+    root_dir = args["root_dir"].rstrip('/')
     device = torch.device('cuda')
     batch_size = args["batch_size"]
     num_epochs = args["epoch_num"]

@@ -76,7 +76,7 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------------------------------------------------------------
     model_path = args['assign_model']
     img_path = args['img_path']
-    img_folder = args['img_dir'].strip('/')
+    img_folder = args['img_dir'].rstrip('/')
     conf_th = float(args['conf_th'])
     save_folder = args['save_folder']
     if not os.path.exists(save_folder): os.makedirs(save_folder)
