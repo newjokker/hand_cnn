@@ -42,6 +42,11 @@ from JoTools.txkj.parseXml import parse_xml
 * python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5 -se 5 -mv 4 
 """
 
+# todo 将验证集和训练集分开，省的麻烦，还能实时更新验证集
+# fixme 为什么验证集的打破的数据每次都不一样
+# todo 每次训练一个模型直接将验证数据全部跑一遍，看一下结果
+# todo 验证一下，对于 检测模型，是不是先将一小部分的数据标签可以改错进行训练，然后再将标签改回来继续训练，会提高模型的性能
+
 
 def args_parse():
     """参数解析"""

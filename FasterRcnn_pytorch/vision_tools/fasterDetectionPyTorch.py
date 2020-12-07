@@ -116,11 +116,6 @@ class FasterDetectionPytorch(detection):
                 index += 1
                 obj = self.CLASSES[labels[i].item()-1]
                 res.append([obj, index, int(x1), int(y1), int(x2), int(y2), str(score)])
-
-        # for each in res:
-        #     print(each)
-        #     print('-'*20)
-
         return res
 
     @try_except()

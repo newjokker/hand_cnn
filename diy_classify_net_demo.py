@@ -65,7 +65,8 @@ class Net(nn.Module):
 def train(epoch):
     #
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = Variable(data), Variable(target)
+        # fixme 不明白这边为什么要将 tensor 转为 Variable
+        # data, target = Variable(data), Variable(target)
         # 使用当前命名空间中的 grad，所以需要 optimizer 每次清空
         optimizer.zero_grad()
         output = model(data)
@@ -84,7 +85,7 @@ def test():
     test_loss = 0
     correct = 0
     for data, target in test_loader:
-        data, target = Variable(data, volatile=True), Variable(target)
+        # data, target = Variable(data, volatile=True), Variable(target)
         output = model(data)
         # sum up batch loss
         test_loss += F.nll_loss(output, target, size_average=False).data.item()
@@ -100,14 +101,15 @@ def test():
 
 if __name__ == "__main__":
 
-    # model = Net()
+
     model_path = r"./model/demo.pth"
     # 加载模型
     model = torch.load(model_path)
+    # model = Net()
     # 优化器需要和 model 绑定，因为要执行 model 参数的更新
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 
-    for epoch in range(1, 3):
+    for epoch in range(3):
         train(epoch)
         test()
 
