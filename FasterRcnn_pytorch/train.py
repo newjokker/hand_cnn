@@ -38,6 +38,9 @@ from JoTools.txkj.parseXml import parse_xml
 # todo 实现裁剪 transform
 # todo 增加训练日志，记录每一次训练使用的语句
 
+# todo transform 中每次训练将标签位置随机位移一些像素，一定的比例
+# todo 计算数据的准确度
+
 """
 * python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5 -se 5 -mv 4 
 """
