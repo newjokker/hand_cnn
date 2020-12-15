@@ -13,7 +13,6 @@ from .coco_eval import CocoEvaluator
 from JoTools.detectionResult import DeteObj, OperateDeteRes, DeteRes
 
 
-
 def target_to_deteres(target, is_tensor=True):
     """将 target 转为 deteres"""
     if is_tensor:
@@ -40,12 +39,6 @@ def target_to_deteres(target, is_tensor=True):
         x1, y1, x2, y2 = each_box
         dete_res.add_obj(x1, y1, x2, y2, tag=each_label, conf=each_score)
     return dete_res
-
-
-
-
-
-
 
 
 """

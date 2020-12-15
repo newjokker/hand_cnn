@@ -53,6 +53,18 @@ def dete_one_img(assign_img_path, assign_save_folder):
     res.save_to_xml(save_xml_path)
 
 
+def check_model_performance(customer_xml_list, standard_xml_list, assign_conf=0.5):
+    """检查指定模型的性能"""
+
+    # todo 先要对 conf 进行过滤
+
+    # todo 有 clc 的结果后，直接根据结果得到 正确率和召回率
+
+
+    # customer_and_standard
+    pass
+
+
 def save_test_log(train_log_folder):
     """记录训练命令"""
     if not os.path.exists(train_log_folder): os.makedirs(train_log_folder)
@@ -100,6 +112,8 @@ if __name__ == "__main__":
             print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
             print(print_str)
             dete_one_img(each_img, save_folder)
+        # todo 计算每一个要素的准确率和召回率
+
     else:
         if os.path.isdir(img_path):
             print(img_path)

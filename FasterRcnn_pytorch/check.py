@@ -32,9 +32,6 @@ from JoTools.detectionResult import DeteObj, OperateDeteRes, DeteRes
 # todo 统计错检，漏检的基本信息，各个 label 的数目，面积占比等
 
 
-# todo target 转为 DeteRes
-
-
 def target_to_deteres(target, is_tensor=True):
     """将 target 转为 deteres"""
     if is_tensor:
@@ -84,6 +81,26 @@ def format_dict(res_dict):
         if each.startswith('extra'):
             res['extra'] += res_dict[each]
     return res
+
+
+
+
+
+
+
+if __name__ == "__main__":
+
+    # fixme 现在的问题是，test 完了之后不能直接显示正确率，各个 conf 下的正确率
+
+
+    model_path = r""
+
+
+    pass
+
+
+
+
 
 
 

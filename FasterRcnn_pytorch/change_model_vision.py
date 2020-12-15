@@ -5,8 +5,10 @@
 import torch
 import torchvision
 
-# todo 直接将新版本保存数据，不保存模型即可
-# torch.save(model.state_dict(), "my_model.pth")  # 只保存模型的参数
+def save_state_dict(model_path, save_path="my_model.pth"):
+    """从模型中提取数据并保存"""
+    model = torch.load(model_path)
+    torch.save(model.state_dict(), save_path)  # 只保存模型的参数
 
 
 def state_dict_to_model(model, state_dict_path, model_path):
@@ -22,6 +24,6 @@ if __name__ == "__main__":
     model_dict_path = r""
     save_model_path = r""
 
-    state_dict_to_model(assigin_model, model_state_dict, save_model_path)
+    state_dict_to_model(assigin_model, model_dict_path, save_model_path)
 
 
