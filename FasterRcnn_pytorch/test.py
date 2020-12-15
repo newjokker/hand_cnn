@@ -21,7 +21,7 @@ def args_parse():
     ap.add_argument("-am", "--assign_model", default=r"./diy_fas_2.pth", help="")
     ap.add_argument("-gpu", "--gpuID", type=str, default="2", help="")
     ap.add_argument("-conf", "--conf_th", type=float, default="0.35", help="")
-    ap.add_argument("-save", "--save_folder", type=str, default="./res", help="")
+    ap.add_argument("-sd", "--save_dir", type=str, default="./res", help="")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
     return assign_args
 
