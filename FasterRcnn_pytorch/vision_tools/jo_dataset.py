@@ -6,7 +6,7 @@ import torch
 import numpy as np
 from PIL import Image
 from JoTools.txkj.parseXml import parse_xml
-
+from JoTools.utils.FileOperationUtil import FileOperationUtil
 
 def xml_info_to_target(xml_info, label_dict, idx):
     """将 xml_info 转为 target 格式"""
@@ -64,3 +64,77 @@ class GetDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
+
+class GetClassifyDataset(torch.utils.data.Dataset):
+    """获取分类模型的dataset"""
+
+    def __init__(self, root, label_list, assign_transforms=None):
+        self.root_dir = root
+        self.label_list = label_list
+        self.transforms = assign_transforms
+        self.imgs = []
+        self.labels = []
+
+        # fixme 看看图片的 label_index 是不是需要从 1 开始，0 留给背景
+        # 遍历所有的图片和其对应的 label，图片的级别不需要固定
+        for label_index, each_label in enumerate(label_list):
+            img_dir = os.path.join(self.root_dir, each_label)
+            if not os.path.exists(img_dir):
+                print("img_dir not exists : {0}".format(img_dir))
+                continue
+            for each_img_path in FileOperationUtil.re_all_file(img_dir, lambda x:str(x).endswith(('.jpg', '.JPG', '.png', '.PNG'))):
+                self.imgs.append(each_img_path)
+                self.labels.append(label_index)
+
+    def __getitem__(self, item):
+        img_path = self.imgs[item]
+        img = Image.open(img_path).convert("RGB")
+        img = img.resize((224,224))
+        target = torch.as_tensor(self.labels[item], dtype=torch.int64)
+        #
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+        return img, target
+
+    def __len__(self):
+        return len(self.imgs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

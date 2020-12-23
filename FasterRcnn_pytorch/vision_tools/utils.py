@@ -237,6 +237,12 @@ class MetricLogger(object):
 def collate_fn(batch):
     return tuple(zip(*batch))
 
+def collate_fn_classify(batch):
+    """将一个 batch 数据进行打包"""
+    image, target = zip(*batch)
+    image = torch.stack(image, dim=0)
+    target = torch.stack(target, dim=0)
+    return (image, target)
 
 def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
 

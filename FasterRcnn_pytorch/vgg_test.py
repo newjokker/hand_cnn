@@ -10,7 +10,8 @@ import sys
 import argparse
 from JoTools.detectionResult import DeteObj, DeteRes
 from JoTools.utils.FileOperationUtil import FileOperationUtil
-
+import shutil
+import numpy as np
 
 
 def args_parse():
@@ -26,43 +27,28 @@ def args_parse():
     return assign_args
 
 
-def dete_one_img(assign_img_path, assign_save_folder):
+def classify_one_img(assign_img_path, assign_save_folder, label_list):
     """检测一张图片"""
-    src_img = cv2.imread(assign_img_path)
+    # src_img = cv2.imread(assign_img_path)
+    src_img = cv2.imdecode(np.fromfile(assign_img_path, dtype=np.uint8), 1)
+    src_img = cv2.resize(src_img, (224,224))
+    # img = img.resize((224, 224))
     img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
-    img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float().cuda()
-    out = model([img_tensor])
+    # img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float().cuda()
+    img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float().cpu()
+    img_tensor = torch.unsqueeze(img_tensor, 0)
+    out = model(img_tensor)
+    pred = out.data.max(1, keepdim=True)[1]
+    pre = pred.data.item()
 
-    # 结果处理并输出
-    boxes, labels, scores = out[0]['boxes'], out[0]['labels'], out[0]['scores']
-    #
-    res = DeteRes(assign_img_path=assign_img_path)
-    for index, each_box in enumerate(boxes):
-        if float(scores[index]) > float(conf_th):
-            x1, y1, x2, y2 = int(each_box[0]), int(each_box[1]), int(each_box[2]), int(each_box[3])
-            conf, tag_index = float(scores[index]), str(labels[index].item())
-            res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_list[int(tag_index) - 1])
+    save_folder = os.path.join(assign_save_folder, str(label_list[pre]))
 
-    # nms
-    res.do_nms(0.1)
-    # 保存画图和 xml
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+
     img_name = os.path.split(assign_img_path)[1]
-    save_img_path = os.path.join(assign_save_folder, img_name)
-    save_xml_path = save_img_path[:-4] + '.xml'
-    res.draw_dete_res(save_img_path, color_dict=color_dict)
-    res.save_to_xml(save_xml_path)
-
-
-def check_model_performance(customer_xml_list, standard_xml_list, assign_conf=0.5):
-    """检查指定模型的性能"""
-
-    # todo 先要对 conf 进行过滤
-
-    # todo 有 clc 的结果后，直接根据结果得到 正确率和召回率
-
-
-    # customer_and_standard
-    pass
+    save_path = os.path.join(save_folder, img_name)
+    shutil.copy(assign_img_path, save_path)
 
 
 def save_test_log(train_log_folder):
@@ -80,7 +66,9 @@ def save_test_log(train_log_folder):
 
 if __name__ == "__main__":
 
-    # todo 可以一次跑多个模型，并得到他们的效果对比
+    # todo 分类模型直接将图片移动到指定的文件夹中，同一个文件夹中就是同一类
+    # todo 使用 dataloader 一次性预测多个图片这样会快一些进行验证
+
     # python3 test.py -am ./model/test.pth -id ./imgs -gpu 2 -save ./res
 
     args = args_parse()
@@ -90,19 +78,21 @@ if __name__ == "__main__":
     img_path = args['img_path']
     img_folder = args['img_dir'].rstrip('/')
     conf_th = float(args['conf_th'])
-    save_folder = args['save_folder']
+    save_folder = args['save_dir']
     if not os.path.exists(save_folder): os.makedirs(save_folder)
     os.environ["CUDA_VISIBLE_DEVICES"] = args['gpuID']
     # bg 是背景
-    # label_list = ["middle_pole", "single"]
-    # label_list = ["bg", "jyzm", "jyzt", 'wtx', "other9"]
-    # label_list = ["bg", "dense2", "other_L4kkx", 'other_fist', "K_no_lw", "other2", "other_fzc", "other7", "other8","other9", "other1", "other6", "K", "dense1", "dense3", "other3", "Lm", "KG"]
     label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
-    color_dict = {"middle_pole": [0, 0, 255], "single": [0, 255, 0]}
+    # ----------------------------------------------------------------------------------------------------------------------
+    img_folder = r"C:\Users\14271\Desktop\del\test\test"
+    model_path = r"C:\Algo\Hand_CNN\FasterRcnn_pytorch\models\crop_18_1674.pth"
+    save_folder = r"C:\Users\14271\Desktop\del\res"
+    device = torch.device('cpu')
     # ----------------------------------------------------------------------------------------------------------------------
 
     model = torch.load(model_path)
-    model.cuda()
+    # model.cuda()
+    model.to(device)
     model.eval()
 
     if os.path.isdir(img_folder):
@@ -111,13 +101,13 @@ if __name__ == "__main__":
         for img_index, each_img in enumerate(img_path_list):
             print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
             print(print_str)
-            dete_one_img(each_img, save_folder)
+            classify_one_img(each_img, save_folder, label_list)
         # todo 计算每一个要素的准确率和召回率
 
     else:
         if os.path.isdir(img_path):
             print(img_path)
-            dete_one_img(img_path, save_folder)
+            classify_one_img(img_path, save_folder, label_list)
         else:
             print("* 未发现需要检测的图片")
             print("img folder : {0}".format(img_folder))

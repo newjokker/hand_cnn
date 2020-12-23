@@ -9,6 +9,8 @@ from  . import utils
 import torchvision.models.detection.mask_rcnn
 from .coco_utils import get_coco_api_from_dataset
 from .coco_eval import CocoEvaluator
+import torch.nn.functional as F
+import torch.nn as nn
 
 # 参考 :  https://github.com/pytorch/vision/tree/master/references/detection
 
@@ -79,6 +81,33 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     return metric_logger
 
 
+def train_one_epoch_classify(model, optimizer, data_loader, device, epoch, print_freq):
+    """训练一个 epoch，返回训练信息"""
+    model.train()
+    loss_function=nn.CrossEntropyLoss()
+    lr_scheduler = None
+    if epoch == 0:
+        warmup_factor = 1. / 1000
+        warmup_iters = min(1000, len(data_loader) - 1)
+        lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
+
+    print(len(data_loader))
+    index = 0
+    for images, targets in data_loader:
+        predict = model(images)
+        # losses = F.nll_loss(predict, targets)
+        losses = loss_function(predict, targets)
+        optimizer.zero_grad()
+        losses.backward()
+        optimizer.step()
+
+        if lr_scheduler is not None:
+            lr_scheduler.step()
+
+        index += 1
+        print(index, losses)
+
+
 def _get_iou_types(model):
     model_without_ddp = model
     if isinstance(model, torch.nn.parallel.DistributedDataParallel):
@@ -93,6 +122,47 @@ def _get_iou_types(model):
 
 @torch.no_grad()
 def evaluate(model, data_loader, device):
+    n_threads = torch.get_num_threads()
+    # FIXME remove this and make paste_masks_in_image run on the GPU
+    # cpu_device = torch.device("cpu")
+    cpu_device = torch.device("cuda")
+    torch.set_num_threads(1)
+    model.eval()
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    header = 'Test:'
+
+    coco = get_coco_api_from_dataset(data_loader.dataset)
+    iou_types = _get_iou_types(model)
+    coco_evaluator = CocoEvaluator(coco, iou_types)
+
+    for images, targets in metric_logger.log_every(data_loader, 100, header):
+        images = list(img.to(device) for img in images)
+        torch.cuda.synchronize()
+        model_time = time.time()
+        outputs = model(images)
+
+        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+        model_time = time.time() - model_time
+
+        res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
+        evaluator_time = time.time()
+        coco_evaluator.update(res)
+        evaluator_time = time.time() - evaluator_time
+        metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
+
+    # gather the stats from all processes
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    coco_evaluator.synchronize_between_processes()
+
+    # accumulate predictions from all images
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
+    torch.set_num_threads(n_threads)
+    return coco_evaluator
+
+@torch.no_grad()
+def evaluate_classify(model, data_loader, device):
     n_threads = torch.get_num_threads()
     # FIXME remove this and make paste_masks_in_image run on the GPU
     # cpu_device = torch.device("cpu")
