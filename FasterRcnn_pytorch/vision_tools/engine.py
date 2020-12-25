@@ -11,6 +11,7 @@ from .coco_utils import get_coco_api_from_dataset
 from .coco_eval import CocoEvaluator
 import torch.nn.functional as F
 import torch.nn as nn
+import math
 
 # 参考 :  https://github.com/pytorch/vision/tree/master/references/detection
 
@@ -81,7 +82,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     return metric_logger
 
 
-def train_one_epoch_classify(model, optimizer, data_loader, device, epoch, print_freq):
+def train_one_epoch_classify(model, optimizer, data_loader, epoch, device, print_loss=50):
     """训练一个 epoch，返回训练信息"""
     model.train()
     loss_function=nn.CrossEntropyLoss()
@@ -91,12 +92,15 @@ def train_one_epoch_classify(model, optimizer, data_loader, device, epoch, print
         warmup_iters = min(1000, len(data_loader) - 1)
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
-    print(len(data_loader))
     index = 0
+    sum_loss = 0
     for images, targets in data_loader:
+        images = images.to(device)
+        targets = targets.to(device)
+        #
         predict = model(images)
-        # losses = F.nll_loss(predict, targets)
         losses = loss_function(predict, targets)
+        sum_loss += losses
         optimizer.zero_grad()
         losses.backward()
         optimizer.step()
@@ -105,7 +109,9 @@ def train_one_epoch_classify(model, optimizer, data_loader, device, epoch, print
             lr_scheduler.step()
 
         index += 1
-        print(index, losses)
+        if math.fmod(index, print_loss) == 0:
+            print(index, sum_loss)
+            sum_loss = 0
 
 
 def _get_iou_types(model):
@@ -160,6 +166,7 @@ def evaluate(model, data_loader, device):
     coco_evaluator.summarize()
     torch.set_num_threads(n_threads)
     return coco_evaluator
+
 
 @torch.no_grad()
 def evaluate_classify(model, data_loader, device):

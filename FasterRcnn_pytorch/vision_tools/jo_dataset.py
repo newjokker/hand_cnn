@@ -75,17 +75,26 @@ class GetClassifyDataset(torch.utils.data.Dataset):
         self.transforms = assign_transforms
         self.imgs = []
         self.labels = []
+        self.label_count_dict = {}
 
         # fixme 看看图片的 label_index 是不是需要从 1 开始，0 留给背景
         # 遍历所有的图片和其对应的 label，图片的级别不需要固定
         for label_index, each_label in enumerate(label_list):
             img_dir = os.path.join(self.root_dir, each_label)
+            self.label_count_dict[each_label] = 0
             if not os.path.exists(img_dir):
                 print("img_dir not exists : {0}".format(img_dir))
                 continue
             for each_img_path in FileOperationUtil.re_all_file(img_dir, lambda x:str(x).endswith(('.jpg', '.JPG', '.png', '.PNG'))):
                 self.imgs.append(each_img_path)
                 self.labels.append(label_index)
+                self.label_count_dict[each_label] += 1
+
+        # 展示训练图片每个类型有多少张
+        print('-'*50)
+        for each in self.label_count_dict.items():
+            print(each)
+        print('-'*50)
 
     def __getitem__(self, item):
         img_path = self.imgs[item]

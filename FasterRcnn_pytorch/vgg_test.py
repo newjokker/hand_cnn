@@ -32,22 +32,18 @@ def classify_one_img(assign_img_path, assign_save_folder, label_list):
     # src_img = cv2.imread(assign_img_path)
     src_img = cv2.imdecode(np.fromfile(assign_img_path, dtype=np.uint8), 1)
     src_img = cv2.resize(src_img, (224,224))
-    # img = img.resize((224, 224))
     img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
-    # img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float().cuda()
-    img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float().cpu()
+    img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float()
+    img_tensor.to(device)
     img_tensor = torch.unsqueeze(img_tensor, 0)
     out = model(img_tensor)
     pred = out.data.max(1, keepdim=True)[1]
     pre = pred.data.item()
 
-    save_folder = os.path.join(assign_save_folder, str(label_list[pre]))
-
-    if not os.path.exists(save_folder):
-        os.makedirs(save_folder)
-
+    save_label_folder = os.path.join(assign_save_folder, str(label_list[pre]))
+    if not os.path.exists(save_label_folder): os.makedirs(save_label_folder)
     img_name = os.path.split(assign_img_path)[1]
-    save_path = os.path.join(save_folder, img_name)
+    save_path = os.path.join(save_label_folder, img_name)
     shutil.copy(assign_img_path, save_path)
 
 

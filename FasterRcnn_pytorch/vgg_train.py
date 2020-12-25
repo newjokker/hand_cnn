@@ -73,11 +73,13 @@ def save_train_log(train_log_folder):
 
 if __name__ == "__main__":
 
+    # todo 加载完数据后打印参与训练的图片的个数
+
     args = args_parse()
     train_log_dir = "./logs"
     save_train_log(train_log_dir)
     # ----------------------------------------------------------------------------------------------------------------------
-    # root_dir = args["root_dir"].rstrip('/')
+    root_dir = args["root_dir"].rstrip('/')
     # device = torch.device('cuda')
     device = torch.device('cpu')
     batch_size = args["batch_size"]
@@ -88,26 +90,14 @@ if __name__ == "__main__":
     save_dir = args["save_dir"]
     save_name = args["save_name"]
     save_epoch = args["save_epoch"]
-
     # ----------------------------------------------------------------------------------------------------------------------
-    root_dir = r"C:\Users\14271\Desktop\del\crop"
-    save_epoch = 1
-    save_dir = './models'
+    if save_name is None: save_name = os.path.split(root_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
-
-    if save_name is None:
-        save_name = os.path.split(root_dir)[1]
-    # ----------------------------------------------------------------------------------------------------------------------
-    # label_list = ["middle_pole", "single"]
-    # label_list = ["ls_lm"]
-    # label_list = ["jyzm", "jyzt", 'wtx', "other9"]
     label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
 
     # get dataset
     train_dataset = GetClassifyDataset(root_dir, label_list, get_transform(train=True))
     dataset_test = GetClassifyDataset(root_dir, label_list, get_transform(train=False))
-    # train_dataset = GetClassifyDataset(root_dir, label_list)
-    # dataset_test = GetClassifyDataset(root_dir, label_list)
 
     # fixme 这边应该直接改为一定的比例进行训练，而不是多少个
     # get train_dataset, test_dataset
@@ -122,7 +112,6 @@ if __name__ == "__main__":
     # get model
     add_epoch = 0
     if args["assign_model"] is None:
-        # model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
         model = torchvision.models.vgg16(pretrained=False, progress=True, num_classes=len(label_list))
     else:
         model = torch.load(args["assign_model"])
@@ -132,7 +121,8 @@ if __name__ == "__main__":
 
     # construct an optimizer
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
+    # optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
+    optimizer = torch.optim.Adam(params, lr=0.03)
 
     # learning rate
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
@@ -146,8 +136,7 @@ if __name__ == "__main__":
         # train for one epoch
         # fixme 这边其实返回了一个类似于日志的东西，看一下其中的内容，并保存为日志文件
         # print_freq = 50, 每 50 次进行一次打印
-        # each_metric_logger = train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
-        train_one_epoch_classify(model, optimizer, data_loader_train, device, epoch, print_freq=50)
+        train_one_epoch_classify(model, optimizer, data_loader_train, epoch, device)
         # print learning info
         # print_log(each_metric_logger)
         # update the learning rate
