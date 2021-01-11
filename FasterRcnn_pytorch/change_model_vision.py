@@ -20,7 +20,7 @@ def state_dict_to_model(model, state_dict_path, model_path):
 
 if __name__ == "__main__":
 
-    assigin_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=17, pretrained_backbone=True)
+    assigin_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=13, pretrained_backbone=True)
     model_dict_path = r""
     save_model_path = r""
 

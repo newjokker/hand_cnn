@@ -121,28 +121,6 @@ def classify_one_img(assign_img_path, assign_save_folder, label_list):
     shutil.copy(assign_img_path, save_path)
 
 
-def test_one_model(model_path, standard_dir, tmp_dir, label_list, save_dir):
-    """检测一个模型，生成模型性能 txt """
-
-    model = torch.load(model_path)
-    model.to(device)
-    model.eval()
-    tmp_dir = os.path.join(tmp_dir, str(uuid.uuid1()))
-    img_path_list = FileOperationUtil.re_all_file(standard_dir, lambda x: str(x).endswith(('.jpg', '.JPG', '.png')))
-    img_count = len(img_path_list)
-    for img_index, each_img in enumerate(img_path_list):
-        print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
-        print(print_str)
-        classify_one_img(each_img, tmp_dir, label_list)
-    # 计算模型性能
-    each_res_dict = cal_acc_classify(standard_dir, tmp_dir)
-    # 模型数据保存戴指定位置
-    model_name = os.path.split(model_path)[1].strip('.pth')
-    save_path = os.path.join(save_dir, model_name + '.json')
-    JsonUtil.save_data_to_json_file(each_res_dict, save_path)
-    # 删除临时文件夹
-
-
 
 if __name__ == "__main__":
 
@@ -164,20 +142,21 @@ if __name__ == "__main__":
         model = torch.load(each_model_path)
         model.to(device)
         model.eval()
-        tmp_dir = os.path.join(tmp_dir, str(uuid.uuid1()))
+        each_tmp_dir = os.path.join(tmp_dir, str(uuid.uuid1()))
         img_path_list = FileOperationUtil.re_all_file(standard_dir, lambda x: str(x).endswith(('.jpg', '.JPG', '.png')))
         img_count = len(img_path_list)
         for img_index, each_img in enumerate(img_path_list):
             print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
             print(print_str)
-            classify_one_img(each_img, tmp_dir, label_list)
+            classify_one_img(each_img, each_tmp_dir, label_list)
         # 计算模型性能
-        each_res_dict = cal_acc_classify(standard_dir, tmp_dir)
+        each_res_dict = cal_acc_classify(standard_dir, each_tmp_dir)
         # 模型数据保存戴指定位置
         model_name = os.path.split(each_model_path)[1].strip('.pth')
         save_path = os.path.join(save_dir, model_name + '.json')
         JsonUtil.save_data_to_json_file(each_res_dict, save_path)
         # 删除临时文件夹
+        shutil.rmtree(each_tmp_dir)
 
 
 

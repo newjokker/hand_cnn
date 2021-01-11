@@ -49,6 +49,9 @@ class GetDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         # load images and bbox
+        # img_dir = os.path.join(self.root_dir, "JPEGImages")
+        # img_path_list = FileOperationUtil.re_all_file(img_dir, lambda x:str(x).endswith(('.jpg', '.JPG')))
+
         img_path = os.path.join(self.root_dir, "JPEGImages", self.imgs[idx])
         xml_path = os.path.join(self.root_dir, "Annotations", self.xmls[idx])
         #
