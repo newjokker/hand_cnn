@@ -12,7 +12,7 @@ from .coco_eval import CocoEvaluator
 import torch.nn.functional as F
 import torch.nn as nn
 import math
-
+import numpy as np
 from JoTools.txkjRes.deteRes import DeteRes
 from JoTools.operateDeteRes import OperateDeteRes
 from JoTools.txkjRes.deteObj import DeteObj
@@ -211,6 +211,20 @@ def print_evaluate_res(res_conf_dict=None, acc_conf_rec=None, label_dict=None):
 
         print(tb_2)
 
+def model_performance_index(acc_conf_rec, assign_label_list):
+    """计算模型性能指数"""
+    # 各个 conf 所有 tag 的平均 res 和 acc
+    res_acc_list = []
+    for each_conf in acc_conf_rec:
+        each_acc_rec = acc_conf_rec[each_conf]
+        for each_tag in assign_label_list:
+            if each_tag in each_acc_rec:
+                each_acc = each_acc_rec[each_tag]['acc']
+                each_rec = each_acc_rec[each_tag]['rec']
+                res_acc_list.append(max(each_acc, 0))
+                res_acc_list.append(max(each_rec, 0))
+    return np.mean(res_acc_list)
+
 
 @torch.no_grad()
 def evaluate(model, data_loader, device, label_dict=None, conf_list=None):
@@ -246,9 +260,11 @@ def evaluate(model, data_loader, device, label_dict=None, conf_list=None):
         acc_rec = a.cal_acc_rec(res_dict, tag_list=list(label_dict.values()))
         res_conf_dict[conf] = res_dict
         acc_conf_rec[conf] = acc_rec
-    # 打印结果
+    # 打印模型性能具体参数
     print_evaluate_res(res_conf_dict, acc_conf_rec, label_dict)
-
+    # 计算模型性能指数
+    model_pd = model_performance_index(acc_conf_rec, list(label_dict.values()))
+    print("model_pd : {0}".format(model_pd))
 # ----------------------------------------------------------------------------------------------------------------------
 
 @torch.no_grad()
