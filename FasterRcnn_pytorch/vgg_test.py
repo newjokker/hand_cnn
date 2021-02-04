@@ -31,6 +31,7 @@ def classify_one_img(assign_img_path, assign_save_folder, label_list):
     """检测一张图片"""
     # src_img = cv2.imread(assign_img_path)
     src_img = cv2.imdecode(np.fromfile(assign_img_path, dtype=np.uint8), 1)
+    src_img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
     src_img = cv2.resize(src_img, (224,224))
     # cv2 读取后是 BGR 排列的，需要先转为 RBG
     img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)

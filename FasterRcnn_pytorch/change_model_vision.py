@@ -20,10 +20,13 @@ def state_dict_to_model(model, state_dict_path, model_path):
 
 if __name__ == "__main__":
 
-    assigin_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=13, pretrained_backbone=True)
-    model_dict_path = r""
-    save_model_path = r""
+    #assigin_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=13, pretrained_backbone=True)
+    assigin_model = torchvision.models.vgg16(pretrained=False, progress=True, num_classes=7)
+    model_dict_path = r"/home/ldq/001_FZC/v0.2.3-A/models/fzc_vgg_step_1.5-0.2.3-A.pth"
+    save_model_path = r"/home/ldq/001_FZC/v0.2.3-A/models/fzc_vgg_step_1.5-0.2.3-A_state_dict.pth"
 
-    state_dict_to_model(assigin_model, model_dict_path, save_model_path)
+    #state_dict_to_model(assigin_model, model_dict_path, save_model_path)
+
+    save_state_dict(model_dict_path, save_model_path)
 
 
