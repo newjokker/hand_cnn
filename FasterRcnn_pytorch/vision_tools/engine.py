@@ -225,9 +225,8 @@ def model_performance_index(acc_conf_rec, assign_label_list):
                 res_acc_list.append(max(each_rec, 0))
     return np.mean(res_acc_list)
 
-
 @torch.no_grad()
-def evaluate(model, data_loader, device, label_dict=None, conf_list=None):
+def evaluate(model, data_loader, device, label_dict=None, conf_list=None, do_print=True):
     """验证"""
 
     # 对每个精度下的结果进行计算
@@ -236,7 +235,7 @@ def evaluate(model, data_loader, device, label_dict=None, conf_list=None):
 
     cpu_device = torch.device("cuda")
     model.eval()
-
+    #
     a = OperateDeteRes()
     a.iou_thershold = 0.4       # 重合度阈值
     res_conf_dict = {}
@@ -261,10 +260,12 @@ def evaluate(model, data_loader, device, label_dict=None, conf_list=None):
         res_conf_dict[conf] = res_dict
         acc_conf_rec[conf] = acc_rec
     # 打印模型性能具体参数
-    print_evaluate_res(res_conf_dict, acc_conf_rec, label_dict)
+    if do_print:
+        print_evaluate_res(res_conf_dict, acc_conf_rec, label_dict)
     # 计算模型性能指数
     model_pd = model_performance_index(acc_conf_rec, list(label_dict.values()))
     print("model_pd : {0}".format(model_pd))
+    return model_pd
 # ----------------------------------------------------------------------------------------------------------------------
 
 @torch.no_grad()
