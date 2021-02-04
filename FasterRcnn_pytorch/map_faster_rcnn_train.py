@@ -192,7 +192,7 @@ if __name__ == "__main__":
         lr_scheduler.step()
         # evaluate on the test dataset
         #if evaluate % 20 ==0:
-        evaluate(model, data_loader_test, device=device)
+        evaluate(model, data_loader_test, device=device, label_dict={i+1:label_list[i] for i in range(len(label_list))})
         # save model
         if epoch % save_epoch == 0:
             if not os.path.exists(save_dir):

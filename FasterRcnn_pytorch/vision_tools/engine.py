@@ -175,56 +175,79 @@ def _dict_add(dict_1, dict_2):
             res[each_key] = dict_2[each_key]
     return res
 
-def print_evaluate_res(res_dict=None, acc_rec=None, label_dict=None):
+def print_evaluate_res(res_conf_dict=None, acc_conf_rec=None, label_dict=None):
     """将结果进行打印"""
-    # todo 分别使用两个方式进行打印输出
+    stand_label_list = list(label_dict.values())
     # ------------------------------------------------------------------------------------
-    tb = prettytable.PrettyTable()
-    tb.field_names = ["class", "acc", "rec"]
-    for each_tag in acc_rec:
-        each_acc = NumberUtil.format_float(acc_rec[each_tag]['acc'], 3)
-        each_rec = NumberUtil.format_float(acc_rec[each_tag]['rec'], 3)
-        tb.add_row([each_tag, each_acc, each_rec])
-    print(tb)
+    for conf in acc_conf_rec:
+        tb_1 = prettytable.PrettyTable()
+        tb_1.field_names = ["class", "conf", "acc", "rec"]
+        acc_rec = acc_conf_rec[conf]
+        for each_tag in stand_label_list:
+            each_acc = NumberUtil.format_float(acc_rec[each_tag]['acc'], 3)
+            each_rec = NumberUtil.format_float(acc_rec[each_tag]['rec'], 3)
+            tb_1.add_row([each_tag, conf, each_acc, each_rec])
+        print(tb_1)
+
     # ------------------------------------------------------------------------------------
+
+    for conf in acc_conf_rec:
+        res_dict = res_conf_dict[conf]
+        tb_2 = prettytable.PrettyTable()
+        tb_2.field_names = [" ", "conf", "num"]
+        #
+        for assign_mode in ['correct', 'miss', 'extra']:
+            for each_tag in stand_label_list:
+                assign_tag = "{0}_{1}".format(assign_mode, each_tag)
+                if assign_tag in res_dict:
+                    tb_2.add_row([assign_tag, conf, res_dict[assign_tag]])
+
+        # 添加 mistake
+        for i in stand_label_list:
+            for j in stand_label_list:
+                mistake_str = "mistake_{0}-{1}".format(i, j)
+                if mistake_str in res_dict:
+                    tb_2.add_row([mistake_str, conf, res_dict[mistake_str]])
+
+        print(tb_2)
 
 
 @torch.no_grad()
-def evaluate(model, data_loader, device, conf=0.5, label_dict=None):
+def evaluate(model, data_loader, device, label_dict=None, conf_list=None):
     """验证"""
 
-    label_dict = {1:"K", 2:'KG', 3:"Lm", 4:"other1", 5:'other2'}
-
-    # 计算在 conf ∈ (0.2, 1) 情况下的 各个类别的准确率和召回率
+    # 对每个精度下的结果进行计算
+    if conf_list is None:
+        conf_list = [0.4,0.5,0.6,0.7,0.8,0.9]
 
     cpu_device = torch.device("cuda")
     model.eval()
 
     a = OperateDeteRes()
     a.iou_thershold = 0.4       # 重合度阈值
-    res_dict = {}
-
-    for images, targets in data_loader:
-        images = list(img.to(device) for img in images)
-        # 参考 ：https://blog.csdn.net/u013548568/article/details/81368019
-        torch.cuda.synchronize(device)
-        outputs = model(images)
-        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
-        # 每一张图片进行对比
-        for i in range(len(outputs)):
-            res = _target_to_deteres(outputs[i], label_dict=label_dict)
-            real = _target_to_deteres(targets[i], label_dict=label_dict)
-            res.filter_by_conf(conf)
-            rere = a.compare_customer_and_standard(real, res)
-            res_dict = _dict_add(res_dict, rere)
-
-    acc_rec = a.cal_acc_rec(res_dict, tag_list=list(label_dict.values()))
+    res_conf_dict = {}
+    acc_conf_rec = {}
+    for conf in conf_list:
+        print("cal conf : {0}".format(conf))
+        res_dict = {}
+        for images, targets in data_loader:
+            images = list(img.to(device) for img in images)
+            # 参考 ：https://blog.csdn.net/u013548568/article/details/81368019
+            torch.cuda.synchronize(device)
+            outputs = model(images)
+            outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+            # 每一张图片进行对比
+            for i in range(len(outputs)):
+                res = _target_to_deteres(outputs[i], label_dict=label_dict)
+                real = _target_to_deteres(targets[i], label_dict=label_dict)
+                res.filter_by_conf(conf)
+                rere = a.compare_customer_and_standard(real, res)
+                res_dict = _dict_add(res_dict, rere)
+        acc_rec = a.cal_acc_rec(res_dict, tag_list=list(label_dict.values()))
+        res_conf_dict[conf] = res_dict
+        acc_conf_rec[conf] = acc_rec
     # 打印结果
-    print_evaluate_res(res_dict, acc_rec, label_dict)
-
-    # todo 转为 pretty_table 的形式，计算多个 conf
-
-    return res_dict
+    print_evaluate_res(res_conf_dict, acc_conf_rec, label_dict)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
