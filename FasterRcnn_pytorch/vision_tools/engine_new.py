@@ -10,35 +10,9 @@ import torchvision.models.detection.mask_rcnn
 from .coco_utils import get_coco_api_from_dataset
 from .coco_eval import CocoEvaluator
 
-from JoTools.detectionResult import DeteObj, OperateDeteRes, DeteRes
-
-
-def target_to_deteres(target, is_tensor=True):
-    """将 target 转为 deteres"""
-    if is_tensor:
-        boxes = target['boxes'].cpu().data.numpy().tolist()
-        labels = target['labels'].cpu().data.numpy().tolist()
-        # 处理没有 score 的情况
-        if 'scores' in target:
-            scores = target['scores'].cpu().data.numpy().tolist()
-        else:
-            scores = [-1] * len(boxes)
-    else:
-        boxes = target['boxes']
-        labels = target['labels']
-        if 'scores' in target:
-            scores = target['scores']
-        else:
-            scores = [-1] * len(boxes)
-    # 得到的结果
-    dete_res = DeteRes()
-    for i in range(len(boxes)):
-        each_box = boxes[i]
-        each_label = labels[i]
-        each_score = scores[i]
-        x1, y1, x2, y2 = each_box
-        dete_res.add_obj(x1, y1, x2, y2, tag=each_label, conf=each_score)
-    return dete_res
+from JoTools.txkjRes.deteRes import DeteRes
+from JoTools.operateDeteRes import OperateDeteRes
+from JoTools.txkjRes.deteObj import DeteObj
 
 
 """
@@ -107,6 +81,34 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     return metric_logger
 
 
+def _target_to_deteres(target, is_tensor=True):
+    """将 target 转为 deteres"""
+    if is_tensor:
+        boxes = target['boxes'].cpu().data.numpy().tolist()
+        labels = target['labels'].cpu().data.numpy().tolist()
+        # 处理没有 score 的情况
+        if 'scores' in target:
+            scores = target['scores'].cpu().data.numpy().tolist()
+        else:
+            scores = [-1] * len(boxes)
+    else:
+        boxes = target['boxes']
+        labels = target['labels']
+        if 'scores' in target:
+            scores = target['scores']
+        else:
+            scores = [-1] * len(boxes)
+    # 得到的结果
+    dete_res = DeteRes()
+    for i in range(len(boxes)):
+        each_box = boxes[i]
+        each_label = labels[i]
+        each_score = scores[i]
+        x1, y1, x2, y2 = each_box
+        dete_res.add_obj(x1, y1, x2, y2, tag=each_label, conf=each_score)
+    return dete_res
+
+
 def _get_iou_types(model):
     model_without_ddp = model
     if isinstance(model, torch.nn.parallel.DistributedDataParallel):
@@ -119,7 +121,7 @@ def _get_iou_types(model):
     return iou_types
 
 
-def dict_add(dict_1, dict_2):
+def _dict_add(dict_1, dict_2):
     """字典之间的相加"""
     res = dict_1.copy()
     # 整合
@@ -133,26 +135,26 @@ def dict_add(dict_1, dict_2):
 
 @torch.no_grad()
 def evaluate(model, data_loader, device, conf=0.5):
+    """验证"""
+
     cpu_device = torch.device("cuda")
     model.eval()
 
     a = OperateDeteRes()
-    a.label_list = [1,2,3]
+    a.iou_thershold = 0.4       # 重合度阈值
     res_dict = {}
 
     for images, targets in data_loader:
         images = list(img.to(device) for img in images)
         # 参考 ：https://blog.csdn.net/u013548568/article/details/81368019
-        torch.cuda.synchronize()
+        torch.cuda.synchronize(device)
         outputs = model(images)
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
-        
+        # 每一张图片进行对比
         for i in range(len(outputs)):
-            res = target_to_deteres(outputs[i])
-            real = target_to_deteres(targets[i])
-            res.filter_by_tages(need_tag=[1,2,3])
-            real.filter_by_tages(need_tag=[1,2,3])
+            res = _target_to_deteres(outputs[i])
+            real = _target_to_deteres(targets[i])
             res.filter_by_conf(conf)
             rere = a.compare_customer_and_standard(real, res)
-            res_dict = dict_add(res_dict, rere)    
+            res_dict = _dict_add(res_dict, rere)
     return res_dict 

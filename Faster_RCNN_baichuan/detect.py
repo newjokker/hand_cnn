@@ -49,7 +49,7 @@ def detect(opt, config):
         del inputs
         del pred
         del tmp
-        print("{} / {}".format(i+1, len(img_list), end='\r')
+        print("{} / {}".format(i+1, len(img_list), end='\r'))
 
     
 

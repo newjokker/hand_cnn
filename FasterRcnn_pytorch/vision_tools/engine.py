@@ -13,6 +13,12 @@ import torch.nn.functional as F
 import torch.nn as nn
 import math
 
+from JoTools.txkjRes.deteRes import DeteRes
+from JoTools.operateDeteRes import OperateDeteRes
+from JoTools.txkjRes.deteObj import DeteObj
+from JoTools.utils.NumberUtil import NumberUtil
+import prettytable
+
 # 参考 :  https://github.com/pytorch/vision/tree/master/references/detection
 
 """
@@ -125,51 +131,125 @@ def _get_iou_types(model):
         iou_types.append("keypoints")
     return iou_types
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+def _target_to_deteres(target, is_tensor=True, label_dict=None):
+    """将 target 转为 deteres"""
+    if is_tensor:
+        boxes = target['boxes'].cpu().data.numpy().tolist()
+        labels = target['labels'].cpu().data.numpy().tolist()
+        # 处理没有 score 的情况
+        if 'scores' in target:
+            scores = target['scores'].cpu().data.numpy().tolist()
+        else:
+            scores = [-1] * len(boxes)
+    else:
+        boxes = target['boxes']
+        labels = target['labels']
+        if 'scores' in target:
+            scores = target['scores']
+        else:
+            scores = [-1] * len(boxes)
+    # 得到的结果
+    dete_res = DeteRes()
+    for i in range(len(boxes)):
+        each_box = boxes[i]
+        # lable 数字转为 tag
+        if label_dict:
+            each_label = label_dict[int(labels[i])]
+        else:
+            each_label = labels[i]
+        each_score = scores[i]
+        x1, y1, x2, y2 = each_box
+        dete_res.add_obj(x1, y1, x2, y2, tag=each_label, conf=each_score)
+    return dete_res
+
+def _dict_add(dict_1, dict_2):
+    """字典之间的相加"""
+    res = dict_1.copy()
+    # 整合
+    for each_key in dict_2:
+        if each_key in res:
+            res[each_key] += dict_2[each_key]
+        else:
+            res[each_key] = dict_2[each_key]
+    return res
+
+def print_evaluate_res(res_dict=None, acc_rec=None, label_dict=None):
+    """将结果进行打印"""
+    # todo 分别使用两个方式进行打印输出
+    # ------------------------------------------------------------------------------------
+    tb = prettytable.PrettyTable()
+    tb.field_names = ["class", "acc", "rec"]
+    for each_tag in acc_rec:
+        each_acc = NumberUtil.format_float(acc_rec[each_tag]['acc'], 3)
+        each_rec = NumberUtil.format_float(acc_rec[each_tag]['rec'], 3)
+        tb.add_row([each_tag, each_acc, each_rec])
+    print(tb)
+    # ------------------------------------------------------------------------------------
+
 
 @torch.no_grad()
-def evaluate(model, data_loader, device):
-    n_threads = torch.get_num_threads()
-    # FIXME remove this and make paste_masks_in_image run on the GPU
-    # cpu_device = torch.device("cpu")
+def evaluate(model, data_loader, device, conf=0.5, label_dict=None):
+    """验证"""
+
+    label_dict = {1:"K", 2:'KG', 3:"Lm", 4:"other1", 5:'other2'}
+
+    # 计算在 conf ∈ (0.2, 1) 情况下的 各个类别的准确率和召回率
+
     cpu_device = torch.device("cuda")
-    torch.set_num_threads(1)
     model.eval()
-    metric_logger = utils.MetricLogger(delimiter="  ")
-    header = 'Test:'
 
-    coco = get_coco_api_from_dataset(data_loader.dataset)
-    iou_types = _get_iou_types(model)
-    coco_evaluator = CocoEvaluator(coco, iou_types)
+    a = OperateDeteRes()
+    a.iou_thershold = 0.4       # 重合度阈值
+    res_dict = {}
 
-    for images, targets in metric_logger.log_every(data_loader, 100, header):
+    for images, targets in data_loader:
         images = list(img.to(device) for img in images)
-        torch.cuda.synchronize()
-        model_time = time.time()
+        # 参考 ：https://blog.csdn.net/u013548568/article/details/81368019
+        torch.cuda.synchronize(device)
         outputs = model(images)
-
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
-        model_time = time.time() - model_time
+        # 每一张图片进行对比
+        for i in range(len(outputs)):
+            res = _target_to_deteres(outputs[i], label_dict=label_dict)
+            real = _target_to_deteres(targets[i], label_dict=label_dict)
+            res.filter_by_conf(conf)
+            rere = a.compare_customer_and_standard(real, res)
+            res_dict = _dict_add(res_dict, rere)
 
-        res = {target["image_id"].item(): output for target, output in zip(targets, outputs)}
-        evaluator_time = time.time()
-        coco_evaluator.update(res)
-        evaluator_time = time.time() - evaluator_time
-        metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
+    acc_rec = a.cal_acc_rec(res_dict, tag_list=list(label_dict.values()))
+    # 打印结果
+    print_evaluate_res(res_dict, acc_rec, label_dict)
 
-    # gather the stats from all processes
-    metric_logger.synchronize_between_processes()
-    print("Averaged stats:", metric_logger)
-    coco_evaluator.synchronize_between_processes()
+    # todo 转为 pretty_table 的形式，计算多个 conf
 
-    # accumulate predictions from all images
-    coco_evaluator.accumulate()
-    coco_evaluator.summarize()
-    torch.set_num_threads(n_threads)
-    return coco_evaluator
+    return res_dict
 
+# ----------------------------------------------------------------------------------------------------------------------
 
 @torch.no_grad()
 def evaluate_classify(model, data_loader, device):
+
+    # todo 参考下面的进行编写
+
+    """
+    test_loss = 0
+    correct = 0
+    for data, target in test_loader:
+        # data, target = Variable(data, volatile=True), Variable(target)
+        output = model(data)
+        # sum up batch loss
+        test_loss += F.nll_loss(output, target, size_average=False).data.item()
+        # get the index of the max log-probability
+        pred = output.data.max(1, keepdim=True)[1]
+        correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+
+    test_loss /= len(test_loader.dataset)
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct, len(test_loader.dataset),100. * correct / len(test_loader.dataset)))
+    """
+
+
     n_threads = torch.get_num_threads()
     # FIXME remove this and make paste_masks_in_image run on the GPU
     # cpu_device = torch.device("cpu")
@@ -208,3 +288,5 @@ def evaluate_classify(model, data_loader, device):
     coco_evaluator.summarize()
     torch.set_num_threads(n_threads)
     return coco_evaluator
+
+

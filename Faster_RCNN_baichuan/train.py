@@ -130,9 +130,7 @@ def train(opt, config):
             print("{} / {}".format(val_epoch+1, total_val_epochs), end='\r')
 
         pred_boxes, pred_classes, pred_scores = sort_by_score(pred_boxes, pred_classes, pred_scores)
-        label_APs = eval_ap_2d(gt_boxes, gt_classes,
-                               pred_boxes, pred_classes, pred_scores,
-                               0.5, config.eval_labels)
+        label_APs = eval_ap_2d(gt_boxes, gt_classes,pred_boxes, pred_classes, pred_scores,0.5, config.eval_labels)
         mAP = 0.
         for label_mAP in label_APs.values():
             mAP += float(label_mAP)
