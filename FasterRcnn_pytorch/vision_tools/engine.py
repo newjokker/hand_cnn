@@ -38,8 +38,31 @@ target 是一个 list 其中的每一个元素是字典，具体 type 如下:
           4158.,   3036.,   2665.], device='cuda:0'), 'iscrowd': tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], device='cuda:0')}
 """
 
+log_index = 0
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
+
+def save_train_log(metric_logger, train_log_path):
+    """保存训练日志"""
+    global log_index
+    log_index += 1
+    lr = metric_logger.meters['lr']
+    loss = metric_logger.meters['loss']
+    loss_classifier = metric_logger.meters['loss_classifier']
+    loss_box_reg = metric_logger.meters['loss_box_reg']
+    loss_objectness = metric_logger.meters['loss_objectness']
+    loss_rpn_box_reg = metric_logger.meters['loss_rpn_box_reg']
+
+    with open(train_log_path, 'a') as train_log_file:
+        train_log_file.write("index :               {0},\n".format(log_index))
+        train_log_file.write("lr :                  {0},\n".format(lr))
+        train_log_file.write("loss :                {0},\n".format(loss))
+        train_log_file.write("loss_classifier :     {0},\n".format(loss_classifier))
+        train_log_file.write("loss_box_reg :        {0},\n".format(loss_box_reg))
+        train_log_file.write("loss_objectness :     {0},\n".format(loss_objectness))
+        train_log_file.write("loss_rpn_box_reg :    {0},\n".format(loss_rpn_box_reg))
+        train_log_file.write("-" * 50 + '\n')
+
+def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, train_log_path='./train.log'):
     """训练一个 epoch，返回训练信息"""
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -85,6 +108,10 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
+        # save log
+        if index % print_freq == 0:
+            save_train_log(metric_logger, train_log_path)
+
     return metric_logger
 
 def train_one_epoch_classify(model, optimizer, data_loader, epoch, device, print_loss=50):
@@ -117,17 +144,6 @@ def train_one_epoch_classify(model, optimizer, data_loader, epoch, device, print
         if math.fmod(index, print_loss) == 0:
             print(index, sum_loss)
             sum_loss = 0
-
-def _get_iou_types(model):
-    model_without_ddp = model
-    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-        model_without_ddp = model.module
-    iou_types = ["bbox"]
-    if isinstance(model_without_ddp, torchvision.models.detection.MaskRCNN):
-        iou_types.append("segm")
-    if isinstance(model_without_ddp, torchvision.models.detection.KeypointRCNN):
-        iou_types.append("keypoints")
-    return iou_types
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -264,7 +280,19 @@ def evaluate(model, data_loader, device, label_dict=None, conf_list=None, do_pri
     model_pd = model_performance_index(acc_conf_rec, list(label_dict.values()))
     print("model_pd : {0}".format(model_pd))
     return model_pd
+
 # ----------------------------------------------------------------------------------------------------------------------
+
+def _get_iou_types(model):
+    model_without_ddp = model
+    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
+        model_without_ddp = model.module
+    iou_types = ["bbox"]
+    if isinstance(model_without_ddp, torchvision.models.detection.MaskRCNN):
+        iou_types.append("segm")
+    if isinstance(model_without_ddp, torchvision.models.detection.KeypointRCNN):
+        iou_types.append("keypoints")
+    return iou_types
 
 @torch.no_grad()
 def evaluate_classify(model, data_loader, device):

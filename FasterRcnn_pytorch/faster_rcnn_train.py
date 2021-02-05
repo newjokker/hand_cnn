@@ -108,6 +108,24 @@ def print_log(metric_logger):
     print("loss_rpn_box_reg : {0}".format(loss_rpn_box_reg))
     print('-' * 50)
 
+# def save_log(metric_logger):
+#     """存储一个结果"""
+#     lr = metric_logger.meters['lr']
+#     loss = metric_logger.meters['loss']
+#     loss_classifier = metric_logger.meters['loss_classifier']
+#     loss_box_reg = metric_logger.meters['loss_box_reg']
+#     loss_objectness = metric_logger.meters['loss_objectness']
+#     loss_rpn_box_reg = metric_logger.meters['loss_rpn_box_reg']
+#     #
+#     with open(train_log_path, 'a') as train_log_file:
+#         train_log_file.write("lr : {0},\n".format(lr))
+#         train_log_file.write("loss : {0},\n".format(loss))
+#         train_log_file.write("loss_classifier : {0},\n".format(loss_classifier))
+#         train_log_file.write("loss_box_reg : {0},\n".format(loss_box_reg))
+#         train_log_file.write("loss_objectness : {0},\n".format(loss_objectness))
+#         train_log_file.write("loss_rpn_box_reg : {0},\n".format(loss_rpn_box_reg))
+#         train_log_file.write("-" * 50)
+
 def save_train_log(train_log_folder):
     """记录训练命令"""
     if not os.path.exists(train_log_folder): os.makedirs(train_log_folder)
@@ -193,10 +211,8 @@ if __name__ == "__main__":
         epoch += add_epoch + 1
         # train for one epoch
         # print_freq = 50, 每 50 次进行一次打印
-        # todo 将日志进行保存
-        each_metric_logger = train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
-        # print learning info
-        # print_log(each_metric_logger)
+        each_metric_logger = train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50, train_log_path=train_log_path)
+        save_log(each_metric_logger)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
