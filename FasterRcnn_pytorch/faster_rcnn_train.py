@@ -33,8 +33,6 @@ from JoTools.txkj.parseXml import parse_xml
 # 参考：
 """
 
-# fixme 只保存效果最好的模型
-# fixme 更改验证代码，现在验证代码太慢了 10 张图片运算要 900+ s
 # todo 实现裁剪 transform
 # todo 增加训练日志，记录每一次训练使用的语句
 
@@ -55,6 +53,7 @@ def args_parse():
     """参数解析"""
     ap = argparse.ArgumentParser()
     ap.add_argument("-rd", "--root_dir", type=str)
+    ap.add_argument("-td", "--test_dir", type=str, default="")
     ap.add_argument("-gpu", "--gpuID", type=str, default="2", help="")
     ap.add_argument("-sd", "--save_dir", type=str, default="./models", help="")
     ap.add_argument("-sn", "--save_name", type=str, default=None, help="")
@@ -64,6 +63,8 @@ def args_parse():
     ap.add_argument("-nw", "--num_workers", type=int, default=12, help="")
     ap.add_argument("-se", "--save_epoch", type=int, default=5, help="多少个 epoch 保存一次")
     ap.add_argument("-ae", "--add_epoch", type=int, default=0, help="增加的 epoch")
+    ap.add_argument("-cl", "--class_list", type=str, default=None, help="分类类别")
+    ap.add_argument("-log", "--train_log_path", type=str, default='./log/train.log', help="训练日志地址")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
     return assign_args
 
@@ -126,6 +127,7 @@ if __name__ == "__main__":
     save_train_log(train_log_dir)
     # ----------------------------------------------------------------------------------------------------------------------
     root_dir = args["root_dir"].rstrip('/')
+    test_dir = args["test_dir"].rstrip('/')
     device = torch.device('cuda')
     batch_size = args["batch_size"]
     num_epochs = args["epoch_num"]
@@ -135,27 +137,33 @@ if __name__ == "__main__":
     save_dir = args["save_dir"]
     save_name = args["save_name"]
     save_epoch = args["save_epoch"]
+    train_log_path = args["train_log_path"]
+
     if save_name is None:
         save_name = os.path.split(root_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
-    # label_list = ["middle_pole", "single"]
-    # label_list = ["ls_lm"]
-    # label_list = ["jyzm", "jyzt", 'wtx', "other9"]
-    label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
+    # label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
+    label_list = list(map(lambda x: x.strip(), args["class_list"].split(',')))
     # ----------------------------------------------------------------------------------------------------------------------
     label_dict = {label_list[i]: i + 1 for i in range(len(label_list))}
     num_classes = len(label_list) + 1
     # ----------------------------------------------------------------------------------------------------------------------
 
-    # get dataset
-    train_dataset = GetDataset(root_dir, label_dict, get_transform(train=True))
-    dataset_test = GetDataset(root_dir, label_dict, get_transform(train=False))
 
     # fixme 这边应该直接改为一定的比例进行训练，而不是多少个
     # get train_dataset, test_dataset
-    indices = torch.randperm(len(train_dataset)).tolist()
-    train_dataset = torch.utils.data.Subset(train_dataset, indices[:-10])
-    dataset_test = torch.utils.data.Subset(dataset_test, indices[-10:])
+    if test_dir:
+        # get dataset
+        train_dataset = GetDataset(root_dir, label_dict, get_transform(train=True))
+        dataset_test = GetDataset(test_dir, label_dict, get_transform(train=False))
+    else:
+        # get dataset
+        train_dataset = GetDataset(root_dir, label_dict, get_transform(train=True))
+        dataset_test = GetDataset(root_dir, label_dict, get_transform(train=False))
+        # do test for 200 img
+        indices = torch.randperm(len(train_dataset)).tolist()
+        train_dataset = torch.utils.data.Subset(train_dataset, indices[:-200])
+        dataset_test = torch.utils.data.Subset(dataset_test, indices[-200:])
 
     # get data_loader
     data_loader_train = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=utils.collate_fn)
@@ -184,15 +192,15 @@ if __name__ == "__main__":
         # update epoch
         epoch += add_epoch + 1
         # train for one epoch
-        # fixme 这边其实返回了一个类似于日志的东西，看一下其中的内容，并保存为日志文件
         # print_freq = 50, 每 50 次进行一次打印
+        # todo 将日志进行保存
         each_metric_logger = train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50)
         # print learning info
         # print_log(each_metric_logger)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
-        if evaluate % save_epoch ==0:
+        if epoch % save_epoch ==0:
             model_pd = evaluate(model, data_loader_test, device=device, label_dict={i+1:label_list[i] for i in range(len(label_list))})
             if model_pd > max_model_pd:
                 model_path = os.path.join(save_dir, "{0}_best.pth".format(save_name))

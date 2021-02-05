@@ -87,7 +87,6 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
 
     return metric_logger
 
-
 def train_one_epoch_classify(model, optimizer, data_loader, epoch, device, print_loss=50):
     """训练一个 epoch，返回训练信息"""
     model.train()
@@ -118,7 +117,6 @@ def train_one_epoch_classify(model, optimizer, data_loader, epoch, device, print
         if math.fmod(index, print_loss) == 0:
             print(index, sum_loss)
             sum_loss = 0
-
 
 def _get_iou_types(model):
     model_without_ddp = model
