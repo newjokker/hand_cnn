@@ -34,19 +34,13 @@ from JoTools.txkj.parseXml import parse_xml
 """
 
 # todo 实现裁剪 transform
-# todo 增加训练日志，记录每一次训练使用的语句
-
 # todo transform 中每次训练将标签位置随机位移一些像素，一定的比例
-# todo 计算数据的准确度
 
 """
 * python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5 -se 5 -mv 4 
 """
 
-# todo 将验证集和训练集分开，省的麻烦，还能实时更新验证集
 # fixme 为什么验证集的打破的数据每次都不一样
-# todo 每次训练一个模型直接将验证数据全部跑一遍，看一下结果
-# todo 验证一下，对于 检测模型，是不是先将一小部分的数据标签可以改错进行训练，然后再将标签改回来继续训练，会提高模型的性能
 
 
 def args_parse():
@@ -108,24 +102,6 @@ def print_log(metric_logger):
     print("loss_rpn_box_reg : {0}".format(loss_rpn_box_reg))
     print('-' * 50)
 
-# def save_log(metric_logger):
-#     """存储一个结果"""
-#     lr = metric_logger.meters['lr']
-#     loss = metric_logger.meters['loss']
-#     loss_classifier = metric_logger.meters['loss_classifier']
-#     loss_box_reg = metric_logger.meters['loss_box_reg']
-#     loss_objectness = metric_logger.meters['loss_objectness']
-#     loss_rpn_box_reg = metric_logger.meters['loss_rpn_box_reg']
-#     #
-#     with open(train_log_path, 'a') as train_log_file:
-#         train_log_file.write("lr : {0},\n".format(lr))
-#         train_log_file.write("loss : {0},\n".format(loss))
-#         train_log_file.write("loss_classifier : {0},\n".format(loss_classifier))
-#         train_log_file.write("loss_box_reg : {0},\n".format(loss_box_reg))
-#         train_log_file.write("loss_objectness : {0},\n".format(loss_objectness))
-#         train_log_file.write("loss_rpn_box_reg : {0},\n".format(loss_rpn_box_reg))
-#         train_log_file.write("-" * 50)
-
 def save_train_log(train_log_folder):
     """记录训练命令"""
     if not os.path.exists(train_log_folder): os.makedirs(train_log_folder)
@@ -167,8 +143,6 @@ if __name__ == "__main__":
     num_classes = len(label_list) + 1
     # ----------------------------------------------------------------------------------------------------------------------
 
-
-    # fixme 这边应该直接改为一定的比例进行训练，而不是多少个
     # get train_dataset, test_dataset
     if test_dir:
         # get dataset
@@ -217,6 +191,7 @@ if __name__ == "__main__":
         lr_scheduler.step()
         # evaluate on the test dataset
         if epoch % save_epoch ==0:
+            # fixme 记录详细的验证日志
             model_pd = evaluate(model, data_loader_test, device=device, label_dict={i+1:label_list[i] for i in range(len(label_list))})
             if model_pd > max_model_pd:
                 model_path = os.path.join(save_dir, "{0}_best.pth".format(save_name))

@@ -80,8 +80,8 @@ if __name__ == "__main__":
     save_train_log(train_log_dir)
     # ----------------------------------------------------------------------------------------------------------------------
     root_dir = args["root_dir"].rstrip('/')
-    # device = torch.device('cuda')
-    device = torch.device('cpu')
+    device = torch.device('cuda')
+    # device = torch.device('cpu')
     batch_size = args["batch_size"]
     num_epochs = args["epoch_num"]
     os.environ["CUDA_VISIBLE_DEVICES"] = args["gpuID"]
@@ -121,8 +121,8 @@ if __name__ == "__main__":
 
     # construct an optimizer
     params = [p for p in model.parameters() if p.requires_grad]
-    # optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
-    optimizer = torch.optim.Adam(params, lr=0.03)
+    optimizer = torch.optim.SGD(params, lr=0.0003, momentum=0.9, weight_decay=0.0005)
+    # optimizer = torch.optim.Adam(params, lr=0.03)
 
     # learning rate
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2)
