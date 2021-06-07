@@ -37,11 +37,10 @@ from JoTools.txkj.parseXml import parse_xml
 # todo transform 中每次训练将标签位置随机位移一些像素，一定的比例
 
 """
-* python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data -gpu 2 -sf ./model -ep 300 -bs 5 -se 5 -mv 4 
+* python3 train.py -rd /home/ldq/000_train_data/wtx_fas_train_data --gpuID 2 -sd ./model -ep 300 -bs 5 -se 5 -mv 4 
 """
-
 # fixme 为什么验证集的打破的数据每次都不一样
-
+# todo 查看一下是不是因为 transform 才导致训练那么慢的
 
 def args_parse():
     """参数解析"""
@@ -58,7 +57,7 @@ def args_parse():
     ap.add_argument("-se", "--save_epoch", type=int, default=5, help="多少个 epoch 保存一次")
     ap.add_argument("-ae", "--add_epoch", type=int, default=0, help="增加的 epoch")
     ap.add_argument("-cl", "--class_list", type=str, default=None, help="分类类别")
-    ap.add_argument("-log", "--train_log_path", type=str, default='./log/train.log', help="训练日志地址")
+    ap.add_argument("-log", "--train_log_path", type=str, default='./logs/train.log', help="训练日志地址")
     assign_args = vars(ap.parse_args())  # vars 返回对象object的属性和属性值的字典对象
     return assign_args
 
@@ -78,7 +77,7 @@ def get_transform(train):
         # 增加噪声
         assign_transforms.append(T.AddGasussNoise(0.5))
         # 增加改变图像大小
-        assign_transforms.append(T.RandomResize(0.8))
+        assign_transforms.append(T.RandomResize(0.5))
 
     # 转变为 tensor
     assign_transforms.append(T.ToTensor())
@@ -137,7 +136,8 @@ if __name__ == "__main__":
         save_name = os.path.split(root_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
     # label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
-    label_list = list(map(lambda x: x.strip(), args["class_list"].split(',')))
+    label_list = ["fzc", "other"]
+    # label_list = list(map(lambda x: x.strip(), args["class_list"].split(',')))
     # ----------------------------------------------------------------------------------------------------------------------
     label_dict = {label_list[i]: i + 1 for i in range(len(label_list))}
     num_classes = len(label_list) + 1
@@ -186,11 +186,11 @@ if __name__ == "__main__":
         # train for one epoch
         # print_freq = 50, 每 50 次进行一次打印
         each_metric_logger = train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50, train_log_path=train_log_path)
-        save_log(each_metric_logger)
+        # save_log(each_metric_logger)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
-        if epoch % save_epoch ==0:
+        if epoch % save_epoch == 0:
             # fixme 记录详细的验证日志
             model_pd = evaluate(model, data_loader_test, device=device, label_dict={i+1:label_list[i] for i in range(len(label_list))})
             if model_pd > max_model_pd:

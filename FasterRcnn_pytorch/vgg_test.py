@@ -41,6 +41,8 @@ def classify_one_img(assign_img_path, assign_save_folder, label_list):
     out = model(img_tensor)
     pred = out.data.max(1, keepdim=True)[1]
     pre = pred.data.item()
+    # fixme 获得置信度
+    prob = torch.nn.functional.softmax(out.data, 1).max().item()
 
     save_label_folder = os.path.join(assign_save_folder, str(label_list[pre]))
     if not os.path.exists(save_label_folder): os.makedirs(save_label_folder)
