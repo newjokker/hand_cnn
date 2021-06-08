@@ -8,7 +8,7 @@ import cv2
 import os
 import sys
 import argparse
-from JoTools.detectionResult import DeteObj, DeteRes
+from JoTools.txkjRes.deteRes import DeteObj, DeteRes
 from JoTools.utils.FileOperationUtil import FileOperationUtil
 
 
@@ -49,7 +49,7 @@ def dete_one_img(assign_img_path, assign_save_folder):
     img_name = os.path.split(assign_img_path)[1]
     save_img_path = os.path.join(assign_save_folder, img_name)
     save_xml_path = save_img_path[:-4] + '.xml'
-    res.draw_dete_res(save_img_path, color_dict=color_dict)
+    # res.draw_dete_res(save_img_path, color_dict=color_dict)
     res.save_to_xml(save_xml_path)
 
 
@@ -57,9 +57,7 @@ def check_model_performance(customer_xml_list, standard_xml_list, assign_conf=0.
     """检查指定模型的性能"""
 
     # todo 先要对 conf 进行过滤
-
     # todo 有 clc 的结果后，直接根据结果得到 正确率和召回率
-
 
     # customer_and_standard
     pass
@@ -81,7 +79,7 @@ def save_test_log(train_log_folder):
 if __name__ == "__main__":
 
     # todo 可以一次跑多个模型，并得到他们的效果对比
-    # python3 test.py -am ./model/test.pth -id ./imgs -gpu 2 -save ./res
+    # python3 test.py -am ./model/test.pth -id ./imgs --gpuID 2 -save ./res -conf 0.5
 
     args = args_parse()
     save_test_log("./logs")
@@ -97,8 +95,9 @@ if __name__ == "__main__":
     # label_list = ["middle_pole", "single"]
     # label_list = ["bg", "jyzm", "jyzt", 'wtx', "other9"]
     # label_list = ["bg", "dense2", "other_L4kkx", 'other_fist', "K_no_lw", "other2", "other_fzc", "other7", "other8","other9", "other1", "other6", "K", "dense1", "dense3", "other3", "Lm", "KG"]
-    label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
-    color_dict = {"middle_pole": [0, 0, 255], "single": [0, 255, 0]}
+    # label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
+    label_list = ["fzc", "other"]
+    color_dict = {"fzc": [0, 255, 0], "other": [0, 0, 255]}
     # ----------------------------------------------------------------------------------------------------------------------
 
     model = torch.load(model_path)
@@ -106,7 +105,7 @@ if __name__ == "__main__":
     model.eval()
 
     if os.path.isdir(img_folder):
-        img_path_list = FileOperationUtil.re_all_file(img_folder, lambda x:str(x).endswith(('.jpg', '.JPG', '.png')))
+        img_path_list = list(FileOperationUtil.re_all_file(img_folder, lambda x:str(x).endswith(('.jpg', '.JPG', '.png'))))
         img_count = len(img_path_list)
         for img_index, each_img in enumerate(img_path_list):
             print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
