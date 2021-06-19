@@ -42,6 +42,10 @@ from JoTools.txkj.parseXml import parse_xml
 # fixme 为什么验证集的打破的数据每次都不一样
 # todo 查看一下是不是因为 transform 才导致训练那么慢的
 
+
+# todo 训练的时候需要对放进去的图片进行缩放，我之前训练慢就是因为没有缩放直接放进去了
+
+
 def args_parse():
     """参数解析"""
     ap = argparse.ArgumentParser()
