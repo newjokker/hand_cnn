@@ -42,10 +42,16 @@ class GetDataset(torch.utils.data.Dataset):
         self.root_dir = root
         self.label_dict = label_dict
         self.transforms = assign_transforms
-        # fixme 如果两个文件夹中的文件不一样多就会出现问题了，所以这个逻辑是不是需要改一下
-        # load all image files, sorting them to ensure that they are aligned
-        self.imgs = list(sorted(os.listdir(os.path.join(root, "JPEGImages"))))
-        self.xmls = list(sorted(os.listdir(os.path.join(root, "Annotations"))))
+        #
+        self.imgs, self.xmls = [], []
+        xml_dir = os.path.join(root, "Annotations")
+        img_dir = os.path.join(root, "JPEGImages")
+        # 找到有对应 img 的 xml 准备训练，这样可以用一份完整的 jpg 对应多个 xml
+        for each_xml_path in FileOperationUtil.re_all_file(xml_dir, endswitch=['.xml']):
+            each_img_path = os.path.join(img_dir, FileOperationUtil.bang_path(each_xml_path)[1], '.jpg')
+            if os.path.exists(each_img_path):
+                self.imgs.append(each_img_path)
+                self.xmls.append(each_xml_path)
 
     def __getitem__(self, idx):
         # load images and bbox
