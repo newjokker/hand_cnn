@@ -14,8 +14,11 @@ import numpy as np
 import shutil
 
 
-def cal_acc_classify(standard_img_dir, customized_img_dir):
+def cal_acc_classify(standard_img_dir, customized_img_dir, save_compare_dir=None):
     """"对比两个分类结果文件夹，分类就是将原图进行了重新的排列"""
+
+    # todo 将每一张图得到一个标签，correct | mistake_A_B
+    #
 
     # 拿到标签
     return_res = []
@@ -95,6 +98,21 @@ def cal_acc_classify(standard_img_dir, customized_img_dir):
                 # print(mistake_str, len(res_dict[mistake_str]))
                 mistake_tb.add_row([i, j, len(res_dict[mistake_str])])
 
+
+    # todo 对于检错的部分，将文件复制到检测的路径并加上标签
+    if save_compare_dir:
+        for each_label in res_dict:
+            # 过滤正确的数据
+            if each_label.startswith("correct"):
+                continue
+            # 新建标签文件夹
+            each_save_dir = os.path.join(save_compare_dir, each_label)
+            os.makedirs(each_save_dir, exist_ok=True)
+            # 将文件移动到新的文件夹
+            for each_img_path in res_dict[each_label]:
+                each_img_save_path = os.path.join(each_save_dir, os.path.split(each_img_path)[1])
+                os.move(each_img_path, each_img_save_path)
+
     print(tb)
     print(mistake_tb)
     return return_res
@@ -127,13 +145,14 @@ if __name__ == "__main__":
     # fixme 批量计算模型性能
 
     # ------------------------------------------------------------------------------------------------------------------
-    label_list = ["yt", "sm", "gt", "other", "zd_yt", "fzc_broken"]
-    standard_dir = r"/home/ldq/002_test_data/crop_add_broken"
-    tmp_dir = r"/home/ldq/004_tmp_dir"
-    save_dir = r"/home/ldq/003_test_res"
-    model_dir = r"/home/ldq/test_fzc_classify/models/crop_add_broken"
+    label_list = ['fzc_broken','gt','sm','yt','zd_yt','other','qx']
+    standard_dir = r"/home/suanfa-4/ldq/test_fzc_step_1_FasterRcnn_pytorch/del/check"
+    tmp_dir = r"/home/suanfa-4/ldq/999_temp"
+    model_dir = r"/home/suanfa-4/ldq/test_fzc_step_1_FasterRcnn_pytorch/model_classify"
     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
     device = torch.device('cuda')
+    save_dir = r"/home/suanfa-4/ldq/003_test_res/fzc_classify"
+    save_compare_dir = r"/home/suanfa-4/ldq/003_test_res/fzc_classify"
     # ------------------------------------------------------------------------------------------------------------------
 
     model_list = FileOperationUtil.re_all_file(model_dir, lambda x:str(x).endswith('.pth'))
@@ -144,13 +163,13 @@ if __name__ == "__main__":
         model.eval()
         each_tmp_dir = os.path.join(tmp_dir, str(uuid.uuid1()))
         img_path_list = FileOperationUtil.re_all_file(standard_dir, lambda x: str(x).endswith(('.jpg', '.JPG', '.png')))
-        img_count = len(img_path_list)
+        img_count = len(list(img_path_list))
         for img_index, each_img in enumerate(img_path_list):
             print_str = "{0}/{1} : {2}".format(img_index, img_count, each_img)
             print(print_str)
             classify_one_img(each_img, each_tmp_dir, label_list)
         # 计算模型性能
-        each_res_dict = cal_acc_classify(standard_dir, each_tmp_dir)
+        each_res_dict = cal_acc_classify(standard_dir, each_tmp_dir, save_compare_dir=save_compare_dir)
         # 模型数据保存戴指定位置
         model_name = os.path.split(each_model_path)[1].strip('.pth')
         save_path = os.path.join(save_dir, model_name + '.json')
