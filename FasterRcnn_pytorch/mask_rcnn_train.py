@@ -14,9 +14,9 @@ import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
 
 from vision_tools import transforms as T
-from vision_tools.engine import train_one_epoch, evaluate
+from vision_tools.engine import train_one_epoch_segment
 from vision_tools import utils
-from vision_tools.jo_dataset import GetDataset,GetSegmentDataset
+from vision_tools.jo_dataset import GetSegmentDataset
 from JoTools.txkj.parseXml import parse_xml
 
 
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         save_name = os.path.split(root_dir)[1]
     # ----------------------------------------------------------------------------------------------------------------------
     # label_list = ["fzc_yt", "fzc_sm", "fzc_gt", "fzc_other", "zd_yt", 'zd_sm', "zd_gt", "zd_other", "qx_yt", "qx_sm", "qx_gt", "other"]
-    label_list = ["fzc", "other"]
+    label_list = ["fzc"]
     # label_list = list(map(lambda x: x.strip(), args["class_list"].split(',')))
     # ----------------------------------------------------------------------------------------------------------------------
     label_dict = {label_list[i]: i + 1 for i in range(len(label_list))}
@@ -168,8 +168,16 @@ if __name__ == "__main__":
     # get model
     add_epoch = 0
     if args["assign_model"] is None:
-        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=False, progress=True, num_classes=num_classes, pretrained_backbone=True)
-        # torchvision.models.detection.
+        model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+        # get number of input features for the classifier
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        # replace the pre-trained head with a new one
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+        # now get the number of input features for the mask classifier
+        in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
+        hidden_layer = 256
+        # and replace the mask predictor with a new one
+        model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
     else:
         model = torch.load(args["assign_model"])
         add_epoch = args["add_epoch"]
@@ -190,17 +198,18 @@ if __name__ == "__main__":
         epoch += add_epoch + 1
         # train for one epoch
         # print_freq = 50, 每 50 次进行一次打印
-        each_metric_logger = train_one_epoch(model, optimizer, data_loader_train, device, epoch, print_freq=50, train_log_path=train_log_path)
+        print(epoch)
+        each_metric_logger = train_one_epoch_segment(model, optimizer, data_loader_train, device, epoch, print_freq=50)
         # save_log(each_metric_logger)
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
-        if epoch % save_epoch == 0:
-            # fixme 记录详细的验证日志
-            model_pd = evaluate(model, data_loader_test, device=device, label_dict={i+1:label_list[i] for i in range(len(label_list))})
-            if model_pd > max_model_pd:
-                model_path = os.path.join(save_dir, "{0}_best.pth".format(save_name))
-                torch.save(model, model_path)
+        # if epoch % save_epoch == 0:
+        #     # fixme 记录详细的验证日志
+        #     model_pd = evaluate(model, data_loader_test, device=device, label_dict={i+1:label_list[i] for i in range(len(label_list))})
+        #     if model_pd > max_model_pd:
+        #         model_path = os.path.join(save_dir, "{0}_best.pth".format(save_name))
+        #         torch.save(model, model_path)
         # save model
         if epoch % save_epoch == 0:
             if not os.path.exists(save_dir):
