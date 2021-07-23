@@ -1,0 +1,9 @@
+2021-07-24-03:58:31 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json
+2021-07-24-04:01:23 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json
+2021-07-24-04:06:31 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json --gpuID 2 -bs 3
+2021-07-24-04:09:50 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json --gpuID 2 -bs 3
+2021-07-24-04:11:28 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json --gpuID 2 -bs 3
+2021-07-24-04:11:53 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json --gpuID 2 -bs 3
+2021-07-24-04:19:31 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json --gpuID 2 -bs 3
+2021-07-24-04:21:03 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json --gpuID 2 -bs 3
+2021-07-24-04:59:12 : python3 mask_rcnn_train.py -rd /home/ldq/001_train_data/jyz_mask/json --gpuID 2 -bs 3 -se 5

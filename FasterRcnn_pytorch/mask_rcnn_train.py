@@ -12,7 +12,8 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
-
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from vision_tools import transforms as T
 from vision_tools.engine import train_one_epoch_segment
 from vision_tools import utils
@@ -150,16 +151,16 @@ if __name__ == "__main__":
     # get train_dataset, test_dataset
     if test_dir:
         # get dataset
-        train_dataset = GetSegmentDataset(root_dir, label_dict, get_transform(train=True))
+        train_dataset = GetSegmentDataset(root_dir, label_dict, get_transform(train=False))
         dataset_test = GetSegmentDataset(test_dir, label_dict, get_transform(train=False))
     else:
         # get dataset
-        train_dataset = GetSegmentDataset(root_dir, label_dict, get_transform(train=True))
+        train_dataset = GetSegmentDataset(root_dir, label_dict, get_transform(train=False))
         dataset_test = GetSegmentDataset(root_dir, label_dict, get_transform(train=False))
         # do test for 200 img
         indices = torch.randperm(len(train_dataset)).tolist()
-        train_dataset = torch.utils.data.Subset(train_dataset, indices[:-200])
-        dataset_test = torch.utils.data.Subset(dataset_test, indices[-200:])
+        train_dataset = torch.utils.data.Subset(train_dataset, indices[:-20])
+        dataset_test = torch.utils.data.Subset(dataset_test, indices[-20:])
 
     # get data_loader
     data_loader_train = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=utils.collate_fn)
