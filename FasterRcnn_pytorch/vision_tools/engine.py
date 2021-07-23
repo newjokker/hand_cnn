@@ -149,6 +149,7 @@ def train_one_epoch_classify(model, optimizer, data_loader, epoch, device, print
 
 def _target_to_deteres(target, is_tensor=True, label_dict=None):
     """将 target 转为 deteres"""
+
     if is_tensor:
         boxes = target['boxes'].cpu().data.numpy().tolist()
         labels = target['labels'].cpu().data.numpy().tolist()

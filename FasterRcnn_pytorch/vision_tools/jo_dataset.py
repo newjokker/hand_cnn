@@ -7,6 +7,8 @@ import numpy as np
 from PIL import Image
 from JoTools.txkj.parseXml import parse_xml
 from JoTools.utils.FileOperationUtil import FileOperationUtil
+from JoTools.txkjRes.segmentJson import SegmentJson
+
 
 def xml_info_to_target(xml_info, label_dict, idx):
     """将 xml_info 转为 target 格式"""
@@ -15,8 +17,7 @@ def xml_info_to_target(xml_info, label_dict, idx):
         name = each_object['name']
         labels.append(np.int(label_dict[name]))
         bndbox = each_object['bndbox']
-        xmin, ymin, xmax, ymax = float(bndbox['xmin']), float(bndbox['ymin']), float(bndbox['xmax']), float(
-            bndbox['ymax'])
+        xmin, ymin, xmax, ymax = float(bndbox['xmin']), float(bndbox['ymin']), float(bndbox['xmax']), float(bndbox['ymax'])
         boxes.append([xmin, ymin, xmax, ymax])
 
     boxes = torch.as_tensor(boxes, dtype=torch.float32)
@@ -28,7 +29,6 @@ def xml_info_to_target(xml_info, label_dict, idx):
     #
     target = {"boxes": boxes, "labels": labels, "image_id": image_id, "area": area, "iscrowd": iscrowd}
     return target
-
 
 def target_to_xml_info(target):
     """将 target 转为 xml_info 样式"""
@@ -55,9 +55,6 @@ class GetDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         # load images and bbox
-        # img_dir = os.path.join(self.root_dir, "JPEGImages")
-        # img_path_list = FileOperationUtil.re_all_file(img_dir, lambda x:str(x).endswith(('.jpg', '.JPG')))
-
         img_path = os.path.join(self.root_dir, "JPEGImages", self.imgs[idx])
         xml_path = os.path.join(self.root_dir, "Annotations", self.xmls[idx])
         #
@@ -76,7 +73,7 @@ class GetDataset(torch.utils.data.Dataset):
 
 
 class GetClassifyDataset(torch.utils.data.Dataset):
-    """获取分类模型的dataset"""
+    """获取分类模型的 dataset"""
 
     def __init__(self, root, label_list, assign_transforms=None):
         self.root_dir = root
@@ -117,6 +114,70 @@ class GetClassifyDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
+
+class GetSegmentDataset(torch.utils.data.Dataset):
+    """获取分割模型的 dataset"""
+
+    def __init__(self, root, label_dict, assign_transforms=None):
+        """init"""
+        self.root = root
+        self.json_path_list = []
+        #
+        for each_json_path in FileOperationUtil.re_all_file(xml_dir, endswitch=['.json']):
+            self.json_path_list.append(each_json_path)
+
+    def __getitem__(self, idx):
+        """解析 json 数据，获取其中的信息"""
+        # 原数据是 json
+        json_path = self.json_path_list[idx]
+        segment_json = SegmentJson(json_path)
+        segment_json.parse_json_info(parse_mask=True, parse_img=True)
+        #
+        img = segment_json.image_data
+        mask = segment_json.mak
+        #
+        obj_ids = np.unique(mask)
+        obj_ids = obj_ids[1:]
+        masks = mask == obj_ids[:, None, None]
+
+        # get bounding box coordinates for each mask
+        num_objs = len(obj_ids)
+        boxes = []
+        for i in range(num_objs):
+            pos = np.where(masks[i])
+            xmin = np.min(pos[1])
+            xmax = np.max(pos[1])
+            ymin = np.min(pos[0])
+            ymax = np.max(pos[0])
+            boxes.append([xmin, ymin, xmax, ymax])
+
+        # convert everything into a torch.Tensor
+        boxes = torch.as_tensor(boxes, dtype=torch.float32)
+        # there is only one class
+        labels = torch.ones((num_objs,), dtype=torch.int64)
+        masks = torch.as_tensor(masks, dtype=torch.uint8)
+
+        image_id = torch.tensor([idx])
+        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+        # suppose all instances are not crowd
+        iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
+
+        target = {}
+        target["boxes"] = boxes
+        target["labels"] = labels
+        target["masks"] = masks
+        target["image_id"] = image_id
+        target["area"] = area
+        target["iscrowd"] = iscrowd
+
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+
+        return img, target
+
+    def __len__(self):
+        return len(self.json_path_list)
 
 
 

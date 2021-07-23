@@ -16,7 +16,7 @@ from torchvision import datasets, transforms
 from vision_tools import transforms as T
 from vision_tools.engine import train_one_epoch, evaluate
 from vision_tools import utils
-from vision_tools.jo_dataset import GetDataset
+from vision_tools.jo_dataset import GetDataset,GetSegmentDataset
 from JoTools.txkj.parseXml import parse_xml
 
 
@@ -150,12 +150,12 @@ if __name__ == "__main__":
     # get train_dataset, test_dataset
     if test_dir:
         # get dataset
-        train_dataset = GetDataset(root_dir, label_dict, get_transform(train=True))
-        dataset_test = GetDataset(test_dir, label_dict, get_transform(train=False))
+        train_dataset = GetSegmentDataset(root_dir, label_dict, get_transform(train=True))
+        dataset_test = GetSegmentDataset(test_dir, label_dict, get_transform(train=False))
     else:
         # get dataset
-        train_dataset = GetDataset(root_dir, label_dict, get_transform(train=True))
-        dataset_test = GetDataset(root_dir, label_dict, get_transform(train=False))
+        train_dataset = GetSegmentDataset(root_dir, label_dict, get_transform(train=True))
+        dataset_test = GetSegmentDataset(root_dir, label_dict, get_transform(train=False))
         # do test for 200 img
         indices = torch.randperm(len(train_dataset)).tolist()
         train_dataset = torch.utils.data.Subset(train_dataset, indices[:-200])
