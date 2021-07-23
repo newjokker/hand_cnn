@@ -155,6 +155,7 @@ if __name__ == "__main__":
     # get train_dataset, test_dataset
     if test_dir:
         # get dataset
+        # fixme 完善 transform 函数
         train_dataset = GetSegmentDataset(root_dir, label_dict, get_transform(train=False))
         dataset_test = GetSegmentDataset(test_dir, label_dict, get_transform(train=False))
     else:
