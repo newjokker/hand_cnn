@@ -123,8 +123,9 @@ class GetSegmentDataset(torch.utils.data.Dataset):
         """init"""
         self.root = root
         self.json_path_list = []
+        self.transforms = assign_transforms
         #
-        for each_json_path in FileOperationUtil.re_all_file(xml_dir, endswitch=['.json']):
+        for each_json_path in FileOperationUtil.re_all_file(root, endswitch=['.json']):
             self.json_path_list.append(each_json_path)
 
     def __getitem__(self, idx):
@@ -135,7 +136,7 @@ class GetSegmentDataset(torch.utils.data.Dataset):
         segment_json.parse_json_info(parse_mask=True, parse_img=True)
         #
         img = segment_json.image_data
-        mask = segment_json.mak
+        mask = segment_json.mask
         #
         obj_ids = np.unique(mask)
         obj_ids = obj_ids[1:]
