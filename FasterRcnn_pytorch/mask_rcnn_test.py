@@ -11,7 +11,7 @@ import argparse
 from JoTools.txkjRes.deteRes import DeteObj, DeteRes
 from JoTools.utils.FileOperationUtil import FileOperationUtil
 import numpy as np
-
+from PIL import Image
 
 def args_parse():
     """参数解析"""
@@ -37,15 +37,9 @@ def dete_one_img(assign_img_path, assign_save_folder):
     mask = out[0]["masks"].cpu().detach().numpy()
     mask = np.squeeze(mask)
     mask = np.sum(mask, axis=0)
-    img[mask > 0.4, 0] = 0
-    print(np.sum(mask))
+    img[mask > conf_th, 0] = 0
 
-    print(mask.shape)
-
-    # np.savetxt(r"/home/ldq/HandCNN/FasterRcnn_pytorch/123.txt", mask)
-    # np.savetxt
-
-    # # 结果处理并输出
+    # 结果处理并输出
     boxes, labels, scores = out[0]['boxes'], out[0]['labels'], out[0]['scores']
     #
     res = DeteRes(assign_img_path=assign_img_path)
@@ -58,13 +52,12 @@ def dete_one_img(assign_img_path, assign_save_folder):
     # nms
     # res.do_nms(0.1)
     # # 保存画图和 xml
+    res.img = Image.fromarray(img)
     img_name = os.path.split(assign_img_path)[1]
-    # save_img_path = os.path.join(assign_save_folder, img_name)
-    # save_xml_path = save_img_path[:-4] + '.xml'
-    # res.draw_dete_res(save_img_path, color_dict=color_dict)
-    # res.save_to_xml(save_xml_path)
-
-    cv2.imwrite(os.path.join(assign_save_folder, "new_" + img_name), img)
+    save_img_path = os.path.join(assign_save_folder, img_name)
+    save_xml_path = save_img_path[:-4] + '.xml'
+    res.draw_dete_res(save_img_path, color_dict=color_dict)
+    res.save_to_xml(save_xml_path)
 
 
 

@@ -145,6 +145,8 @@ class GetSegmentDataset(torch.utils.data.Dataset):
         # get bounding box coordinates for each mask
         num_objs = len(obj_ids)
         boxes = []
+
+        # 获取 box
         for i in range(num_objs):
             pos = np.where(masks[i])
             xmin = np.min(pos[1])
