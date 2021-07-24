@@ -58,7 +58,12 @@ def dete_one_img(assign_img_path, assign_save_folder):
     save_xml_path = save_img_path[:-4] + '.xml'
     res.draw_dete_res(save_img_path, color_dict=color_dict)
     res.save_to_xml(save_xml_path)
-
+    # save mask
+    mask_path = os.path.join(assign_save_folder, os.path.splitext(img_name)[0] + "_mask.png")
+    mask_stack = np.stack([mask, mask, mask], axis=2)
+    mask_stack = mask_stack.astype(np.uint8)
+    mask_img = Image.fromarray(mask_stack)
+    mask_img.save(mask_path)
 
 
 def save_test_log(train_log_folder):
