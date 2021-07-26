@@ -13,6 +13,7 @@ from JoTools.utils.FileOperationUtil import FileOperationUtil
 import numpy as np
 from PIL import Image
 
+
 def args_parse():
     """参数解析"""
     ap = argparse.ArgumentParser()
@@ -32,26 +33,32 @@ def dete_one_img(assign_img_path, assign_save_folder):
     img = cv2.cvtColor(src_img, cv2.COLOR_BGR2RGB)
     img_tensor = torch.from_numpy(img / 255.).permute(2, 0, 1).float().cuda()
     out = model([img_tensor])
-
     # 得到 mask 矩阵
     mask = out[0]["masks"].cpu().detach().numpy()
     mask = np.squeeze(mask)
+    mask = mask > conf_th
+    # 转为 int 方便后面的分层操作
+    mask = mask.astype(np.int)
+    # 给每一层赋予不一样的值
+    value_index = 1
+    for i in range(mask.shape[0]):
+        mask[value_index-1,:,:] *= value_index
+        value_index += 1
+    # 在原图上画出 mask 部分
     mask = np.sum(mask, axis=0)
-    img[mask > conf_th, 0] = 0
-
+    img[mask > 0, 0] = 255
     # 结果处理并输出
     boxes, labels, scores = out[0]['boxes'], out[0]['labels'], out[0]['scores']
-    #
+    # 在结果上画出 dete obj 框
     res = DeteRes(assign_img_path=assign_img_path)
     for index, each_box in enumerate(boxes):
         if float(scores[index]) > float(conf_th):
             x1, y1, x2, y2 = int(each_box[0]), int(each_box[1]), int(each_box[2]), int(each_box[3])
             conf, tag_index = float(scores[index]), str(labels[index].item())
             res.add_obj(x1=x1, y1=y1, x2=x2, y2=y2, conf=conf, tag=label_list[int(tag_index) - 1])
-
     # nms
     # res.do_nms(0.1)
-    # # 保存画图和 xml
+    # 保存画图和 xml
     res.img = Image.fromarray(img)
     img_name = os.path.split(assign_img_path)[1]
     save_img_path = os.path.join(assign_save_folder, img_name)
